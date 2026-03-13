@@ -1,0 +1,107 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "VirtualizorJS",
+  "projectDescription": "TypeScript SDK for the Virtualizor server management API with type-safe VPS, user, and plan management.",
+  "theme": "aspen",
+  "primaryColor": "#848c8e",
+  "lightColor": "#11161e",
+  "darkColor": "#cfd0d2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core/authentication",
+              "core/configuration",
+              "core/error-handling",
+              "core/task-polling"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/examples"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Client",
+            "pages": [
+              "api/client"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "api/resources/vps",
+              "api/resources/users",
+              "api/resources/plans",
+              "api/resources/tasks"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types/common",
+              "api/types/vps",
+              "api/types/users",
+              "api/types/plans"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "VPS lifecycle management (create, start, stop, restart, rebuild, clone, migrate)",
+    "User and plan management",
+    "Async task polling with configurable intervals",
+    "Full TypeScript support with comprehensive types",
+    "Zero production dependencies"
+  ],
+  "publicApiSurface": [
+    "VirtualizorClient",
+    "createVirtualizorClient()",
+    "client.vps.list()",
+    "client.vps.get()",
+    "client.vps.create()",
+    "client.vps.delete()",
+    "client.vps.start()",
+    "client.vps.stop()",
+    "client.vps.restart()",
+    "client.vps.poweroff()",
+    "client.vps.suspend()",
+    "client.vps.unsuspend()",
+    "client.vps.rebuild()",
+    "client.vps.clone()",
+    "client.vps.migrate()",
+    "client.vps.status()",
+    "client.vps.vnc()",
+    "client.vps.stats()",
+    "client.users.list()",
+    "client.users.create()",
+    "client.users.delete()",
+    "client.users.suspend()",
+    "client.users.unsuspend()",
+    "client.plans.list()",
+    "client.plans.create()",
+    "client.plans.delete()",
+    "client.tasks.get()",
+    "client.tasks.wait()"
+  ]
+}
