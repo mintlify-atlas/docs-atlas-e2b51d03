@@ -1,0 +1,146 @@
+---
+title: Installation
+description: Install VirtualizorJS in your Node.js or Bun project
+---
+
+## Prerequisites
+
+Before installing VirtualizorJS, ensure you have one of the following JavaScript runtimes:
+
+- **Bun** 1.0.0 or higher (recommended)
+- **Node.js** 16.0.0 or higher
+
+You'll also need:
+
+- Access to a Virtualizor server
+- API credentials (API key and API password) from your Virtualizor panel
+
+<Note>
+  VirtualizorJS works with both Node.js and Bun runtimes. It has zero production dependencies, making it lightweight and secure.
+</Note>
+
+## Install VirtualizorJS
+
+Choose your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm install virtualizorjs
+```
+
+```bash yarn
+yarn add virtualizorjs
+```
+
+```bash pnpm
+pnpm add virtualizorjs
+```
+
+```bash bun
+bun add virtualizorjs
+```
+
+</CodeGroup>
+
+## Verify Installation
+
+After installation, verify that VirtualizorJS is working by creating a simple test file:
+
+```typescript test.ts
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'your-server.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+});
+
+console.log('VirtualizorJS client created successfully!');
+```
+
+Run the test file:
+
+<CodeGroup>
+
+```bash node
+node test.ts
+```
+
+```bash bun
+bun run test.ts
+```
+
+```bash tsx
+tsx test.ts
+```
+
+</CodeGroup>
+
+<Note>
+  If you're using Node.js with TypeScript, you may need to install `tsx` or configure your `tsconfig.json` appropriately.
+</Note>
+
+## Getting API Credentials
+
+To use VirtualizorJS, you need API credentials from your Virtualizor panel:
+
+1. Log in to your Virtualizor admin panel
+2. Navigate to **Configuration** → **API Credentials**
+3. Create a new API credential or use an existing one
+4. Note your **API Key** and **API Password**
+
+<Warning>
+  Keep your API credentials secure. Never commit them to version control or expose them in client-side code. Use environment variables to store sensitive credentials.
+</Warning>
+
+## Environment Variables
+
+We recommend storing your Virtualizor credentials in environment variables:
+
+```bash .env
+VIRTUALIZOR_HOST=virtualizor.example.com
+VIRTUALIZOR_API_KEY=your-api-key
+VIRTUALIZOR_API_PASS=your-api-pass
+```
+
+Then load them in your application:
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: process.env.VIRTUALIZOR_HOST!,
+  apiKey: process.env.VIRTUALIZOR_API_KEY!,
+  apiPass: process.env.VIRTUALIZOR_API_PASS!,
+});
+```
+
+## TypeScript Configuration
+
+VirtualizorJS is built with TypeScript and includes full type definitions. If you're using TypeScript, ensure your `tsconfig.json` has the following settings:
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Learn how to use VirtualizorJS with a step-by-step guide
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api/client">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

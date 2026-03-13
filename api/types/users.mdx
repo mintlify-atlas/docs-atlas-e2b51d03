@@ -1,0 +1,231 @@
+---
+title: 'User Types'
+description: 'Type definitions for user management operations'
+---
+
+## Overview
+
+Types and interfaces for managing users in Virtualizor.
+
+## User
+
+The main User object representing a Virtualizor user account.
+
+```typescript
+export interface User {
+  uid: string;
+  email: string;
+  fname?: string;
+  lname?: string;
+  status: string;
+  type: string;
+}
+```
+
+<ResponseField name="uid" type="string" required>
+  Unique identifier for the user
+</ResponseField>
+
+<ResponseField name="email" type="string" required>
+  User's email address
+</ResponseField>
+
+<ResponseField name="fname" type="string" optional>
+  User's first name
+</ResponseField>
+
+<ResponseField name="lname" type="string" optional>
+  User's last name
+</ResponseField>
+
+<ResponseField name="status" type="string" required>
+  User account status (e.g., active, suspended)
+</ResponseField>
+
+<ResponseField name="type" type="string" required>
+  User account type (e.g., admin, user, reseller)
+</ResponseField>
+
+## CreateUserParams
+
+Parameters for creating a new user account.
+
+```typescript
+export interface CreateUserParams {
+  email: string;
+  password: string;
+  fname?: string;
+  lname?: string;
+  acttype?: number;
+  [key: string]: unknown;
+}
+```
+
+<ResponseField name="email" type="string" required>
+  Email address for the new user
+</ResponseField>
+
+<ResponseField name="password" type="string" required>
+  Password for the new user account
+</ResponseField>
+
+<ResponseField name="fname" type="string" optional>
+  First name of the user
+</ResponseField>
+
+<ResponseField name="lname" type="string" optional>
+  Last name of the user
+</ResponseField>
+
+<ResponseField name="acttype" type="number" optional>
+  Account type identifier
+</ResponseField>
+
+## EditUserParams
+
+Parameters for editing an existing user account.
+
+```typescript
+export interface EditUserParams {
+  uid: string;
+  email?: string;
+  password?: string;
+  fname?: string;
+  lname?: string;
+}
+```
+
+<ResponseField name="uid" type="string" required>
+  User ID of the account to edit
+</ResponseField>
+
+<ResponseField name="email" type="string" optional>
+  New email address
+</ResponseField>
+
+<ResponseField name="password" type="string" optional>
+  New password
+</ResponseField>
+
+<ResponseField name="fname" type="string" optional>
+  New first name
+</ResponseField>
+
+<ResponseField name="lname" type="string" optional>
+  New last name
+</ResponseField>
+
+## Usage Examples
+
+### Importing Types
+
+```typescript
+import type { User, CreateUserParams, EditUserParams } from 'virtualizor';
+```
+
+### Creating a User
+
+```typescript
+import type { CreateUserParams } from 'virtualizor';
+
+const userParams: CreateUserParams = {
+  email: 'john.doe@example.com',
+  password: 'SecurePassword123!',
+  fname: 'John',
+  lname: 'Doe',
+  acttype: 1
+};
+
+const result = await client.users.create(userParams);
+```
+
+### Editing a User
+
+```typescript
+import type { EditUserParams } from 'virtualizor';
+
+const editParams: EditUserParams = {
+  uid: '12345',
+  email: 'john.updated@example.com',
+  fname: 'Jonathan'
+};
+
+await client.users.edit(editParams);
+```
+
+### Type-Safe User Display
+
+```typescript
+import type { User } from 'virtualizor';
+
+function displayUserInfo(user: User): string {
+  const fullName = [user.fname, user.lname].filter(Boolean).join(' ');
+  const displayName = fullName || user.email;
+  
+  return `User ${user.uid}: ${displayName} (${user.email}) - ${user.status}`;
+}
+
+const user: User = {
+  uid: '12345',
+  email: 'john.doe@example.com',
+  fname: 'John',
+  lname: 'Doe',
+  status: 'active',
+  type: 'user'
+};
+
+console.log(displayUserInfo(user));
+// Output: User 12345: John Doe (john.doe@example.com) - active
+```
+
+### Validating User Data
+
+```typescript
+import type { CreateUserParams } from 'virtualizor';
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+function validateCreateParams(params: CreateUserParams): boolean {
+  if (!isValidEmail(params.email)) {
+    throw new Error('Invalid email address');
+  }
+  
+  if (params.password.length < 8) {
+    throw new Error('Password must be at least 8 characters');
+  }
+  
+  return true;
+}
+
+const params: CreateUserParams = {
+  email: 'user@example.com',
+  password: 'SecurePass123!'
+};
+
+if (validateCreateParams(params)) {
+  await client.users.create(params);
+}
+```
+
+### Working with User Lists
+
+```typescript
+import type { User } from 'virtualizor';
+
+interface UserListResponse {
+  users: Record<string, User>;
+}
+
+async function getActiveUsers(): Promise<User[]> {
+  const response = await client.users.list() as UserListResponse;
+  
+  return Object.values(response.users).filter(
+    (user) => user.status === 'active'
+  );
+}
+
+const activeUsers = await getActiveUsers();
+console.log(`Found ${activeUsers.length} active users`);
+```

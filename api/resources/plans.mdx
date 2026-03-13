@@ -1,0 +1,172 @@
+---
+title: PlansResource
+description: Manage VPS plans in Virtualizor
+---
+
+The `PlansResource` class provides methods to manage VPS plans (resource templates).
+
+## Methods
+
+### list()
+
+List all available VPS plans.
+
+<ResponseField name="return" type="Promise<Record<string, Plan>>">
+  Object mapping plan IDs to plan objects
+  
+  <Expandable title="Plan properties">
+    <ResponseField name="pid" type="string">
+      Plan ID
+    </ResponseField>
+    <ResponseField name="plan_name" type="string">
+      Plan name
+    </ResponseField>
+    <ResponseField name="disk" type="string">
+      Disk space (in GB)
+    </ResponseField>
+    <ResponseField name="ram" type="string">
+      RAM (in MB)
+    </ResponseField>
+    <ResponseField name="bandwidth" type="string">
+      Bandwidth (in GB)
+    </ResponseField>
+    <ResponseField name="cpu" type="string">
+      CPU cores
+    </ResponseField>
+    <ResponseField name="virt" type="string">
+      Virtualization type (kvm, openvz, etc.)
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```typescript
+const plans = await virtualizor.plans.list();
+
+for (const [pid, plan] of Object.entries(plans)) {
+  console.log(`${plan.plan_name}: ${plan.ram}MB RAM, ${plan.disk}GB disk`);
+}
+```
+
+---
+
+### create()
+
+Create a new VPS plan. Returns an async task result.
+
+<ParamField path="params" type="CreatePlanParams" required>
+  Plan creation parameters
+  
+  <Expandable title="properties">
+    <ParamField path="plan_name" type="string" required>
+      Name for the plan
+    </ParamField>
+    <ParamField path="disk" type="number" required>
+      Disk space in GB
+    </ParamField>
+    <ParamField path="ram" type="number" required>
+      RAM in MB
+    </ParamField>
+    <ParamField path="bandwidth" type="number" required>
+      Bandwidth in GB
+    </ParamField>
+    <ParamField path="cpu" type="number" required>
+      Number of CPU cores
+    </ParamField>
+    <ParamField path="virt" type="string">
+      Virtualization type (kvm, openvz, xen, etc.)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.plans.create({
+  plan_name: 'Standard Plan',
+  disk: 50,
+  ram: 2048,
+  bandwidth: 1000,
+  cpu: 2,
+  virt: 'kvm',
+});
+
+const task = await virtualizor.tasks.wait(result.done.taskid);
+console.log('Plan created successfully');
+```
+
+---
+
+### delete()
+
+Delete a VPS plan. Returns an async task result.
+
+<ParamField path="planId" type="string" required>
+  Plan ID to delete
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.plans.delete('5');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+console.log('Plan deleted successfully');
+```
+
+## Example: Complete Plan Workflow
+
+```typescript
+// Create a new plan
+const createResult = await virtualizor.plans.create({
+  plan_name: 'Premium Plan',
+  disk: 100,
+  ram: 4096,
+  bandwidth: 2000,
+  cpu: 4,
+  virt: 'kvm',
+});
+
+await virtualizor.tasks.wait(createResult.done.taskid);
+
+// List all plans to find the new plan
+const plans = await virtualizor.plans.list();
+const newPlan = Object.values(plans).find(
+  (p) => p.plan_name === 'Premium Plan'
+);
+
+if (newPlan) {
+  console.log(`Created plan with ID: ${newPlan.pid}`);
+  
+  // Use the plan to create a VPS
+  await virtualizor.vps.create({
+    hostname: 'premium-vps.example.com',
+    rootpass: 'SecureP@ssw0rd',
+    osid: 270,
+    plid: parseInt(newPlan.pid),
+  });
+}
+```
+
+## Async Operations
+
+All plan management operations (create, delete) return `AsyncTaskResult` objects. Use the `tasks.wait()` method to poll for completion:
+
+```typescript
+const result = await virtualizor.plans.create({
+  plan_name: 'Basic Plan',
+  disk: 25,
+  ram: 1024,
+  bandwidth: 500,
+  cpu: 1,
+});
+
+// Wait for completion
+const task = await virtualizor.tasks.wait(result.done.taskid);
+
+if (task.status === '1' || task.status === 'done') {
+  console.log('Plan created successfully');
+}
+```

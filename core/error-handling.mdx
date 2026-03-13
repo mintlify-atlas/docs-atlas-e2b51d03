@@ -1,0 +1,413 @@
+---
+title: 'Error Handling'
+description: 'Handle errors and exceptions when working with the Virtualizor API'
+icon: 'triangle-exclamation'
+---
+
+## Overview
+
+VirtualizorJS provides structured error handling through the `VirtualizorApiError` class. All API errors are thrown as instances of this class, making it easy to catch and handle specific error scenarios.
+
+## The VirtualizorApiError Class
+
+All API errors thrown by VirtualizorJS are instances of `VirtualizorApiError`:
+
+```typescript
+export class VirtualizorApiError extends Error {
+  readonly code: number;
+
+  constructor(message: string, code: number) {
+    super(message);
+    this.name = 'VirtualizorApiError';
+    this.code = code;
+  }
+}
+```
+
+### Properties
+
+<ParamField path="message" type="string">
+  A human-readable error message describing what went wrong.
+</ParamField>
+
+<ParamField path="code" type="number">
+  The numeric error code returned by the Virtualizor API.
+</ParamField>
+
+<ParamField path="name" type="string">
+  Always set to `"VirtualizorApiError"` for type identification.
+</ParamField>
+
+## Basic Error Handling
+
+Use try/catch blocks to handle API errors:
+
+```typescript
+import { createVirtualizorClient, VirtualizorApiError } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+});
+
+try {
+  await client.vps.start('invalid-id');
+} catch (err) {
+  if (err instanceof VirtualizorApiError) {
+    console.error(`API Error [${err.code}]: ${err.message}`);
+  } else {
+    console.error('Unexpected error:', err);
+  }
+}
+```
+
+## Error Response Structure
+
+When the Virtualizor API returns an error, it includes an `error` array in the response:
+
+```json
+{
+  "error": [
+    {
+      "msg": "VPS not found",
+      "code": 404
+    }
+  ]
+}
+```
+
+The SDK automatically parses this and throws a `VirtualizorApiError` with the first error's message and code.
+
+### Error Parsing Implementation
+
+From `src/http.ts:21`:
+
+```typescript
+parseResponse<T extends VirtualizorResponse>(data: T): T {
+  if (data.error && data.error.length > 0) {
+    const first = data.error[0];
+    if (first) {
+      throw new VirtualizorApiError(first.msg, first.code);
+    }
+  }
+  return data;
+}
+```
+
+## Common Error Scenarios
+
+### VPS Not Found
+
+```typescript
+try {
+  const vps = await client.vps.get('999999');
+} catch (err) {
+  if (err instanceof VirtualizorApiError && err.code === 404) {
+    console.error('VPS not found');
+  }
+}
+```
+
+### Authentication Failure
+
+```typescript
+try {
+  const vpsList = await client.vps.list();
+} catch (err) {
+  if (err instanceof Error && err.message.includes('Redirect detected')) {
+    console.error('Authentication failed. Check your API credentials.');
+  }
+}
+```
+
+### Permission Denied
+
+```typescript
+try {
+  await client.vps.delete('123');
+} catch (err) {
+  if (err instanceof VirtualizorApiError && err.code === 403) {
+    console.error('Permission denied. You may not have access to this resource.');
+  }
+}
+```
+
+### Request Timeout
+
+```typescript
+try {
+  await client.vps.create({
+    hostname: 'my-vps.example.com',
+    osid: 1,
+    rootpass: 'SecurePassword123!',
+  });
+} catch (err) {
+  if (err instanceof Error && err.message.includes('timed out')) {
+    console.error('Request timed out. The server may be slow or unresponsive.');
+  }
+}
+```
+
+### Invalid JSON Response
+
+```typescript
+try {
+  await client.vps.list();
+} catch (err) {
+  if (err instanceof Error && err.message.includes('Failed to parse response')) {
+    console.error('Received invalid JSON from the server');
+  }
+}
+```
+
+## Advanced Error Handling Patterns
+
+### Retry Logic
+
+Implement retry logic for transient errors:
+
+```typescript
+import { VirtualizorApiError } from 'virtualizorjs';
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries: number = 3,
+  delayMs: number = 1000
+): Promise<T> {
+  let lastError: Error;
+  
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastError = err as Error;
+      
+      // Don't retry on authentication errors
+      if (err instanceof Error && err.message.includes('Authentication failed')) {
+        throw err;
+      }
+      
+      // Wait before retrying
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delayMs * (i + 1)));
+      }
+    }
+  }
+  
+  throw lastError!;
+}
+
+// Usage
+try {
+  const vpsList = await withRetry(() => client.vps.list());
+  console.log('VPS list:', vpsList);
+} catch (err) {
+  console.error('Failed after retries:', err);
+}
+```
+
+### Custom Error Handler
+
+Create a centralized error handler:
+
+```typescript
+import { VirtualizorApiError } from 'virtualizorjs';
+
+function handleVirtualizorError(err: unknown): never {
+  if (err instanceof VirtualizorApiError) {
+    switch (err.code) {
+      case 404:
+        throw new Error('Resource not found');
+      case 403:
+        throw new Error('Permission denied');
+      case 500:
+        throw new Error('Server error');
+      default:
+        throw new Error(`API error [${err.code}]: ${err.message}`);
+    }
+  }
+  
+  if (err instanceof Error) {
+    if (err.message.includes('Redirect detected')) {
+      throw new Error('Authentication failed');
+    }
+    if (err.message.includes('timed out')) {
+      throw new Error('Request timeout');
+    }
+    if (err.message.includes('Failed to parse response')) {
+      throw new Error('Invalid server response');
+    }
+  }
+  
+  throw new Error('Unknown error occurred');
+}
+
+// Usage
+try {
+  await client.vps.start('123');
+} catch (err) {
+  handleVirtualizorError(err);
+}
+```
+
+### Graceful Degradation
+
+Handle errors gracefully in user-facing applications:
+
+```typescript
+import { VirtualizorApiError } from 'virtualizorjs';
+
+async function getVpsSafely(vpsId: string) {
+  try {
+    return await client.vps.get(vpsId);
+  } catch (err) {
+    if (err instanceof VirtualizorApiError) {
+      console.warn(`Could not fetch VPS ${vpsId}: ${err.message}`);
+      return null;
+    }
+    throw err; // Re-throw unexpected errors
+  }
+}
+
+const vps = await getVpsSafely('123');
+if (vps) {
+  console.log('VPS found:', vps.hostname);
+} else {
+  console.log('VPS not available');
+}
+```
+
+## Error Handling with Task Polling
+
+Task polling operations can fail in multiple ways:
+
+```typescript
+import { VirtualizorApiError } from 'virtualizorjs';
+
+try {
+  // Start the VPS
+  const result = await client.vps.start('123');
+  
+  if (!result.taskid) {
+    throw new Error('No task ID returned');
+  }
+  
+  // Wait for task completion
+  const task = await client.tasks.wait(result.taskid, {
+    pollIntervalMs: 2000,
+    timeoutMs: 60000,
+  });
+  
+  console.log('VPS started successfully');
+} catch (err) {
+  if (err instanceof VirtualizorApiError) {
+    console.error(`API error: ${err.message}`);
+  } else if (err instanceof Error) {
+    if (err.message.includes('timed out')) {
+      console.error('Task polling timed out');
+    } else if (err.message.includes('failed')) {
+      console.error('Task failed on the server');
+    } else {
+      console.error('Unexpected error:', err.message);
+    }
+  }
+}
+```
+
+## Authentication Error Details
+
+Authentication failures are detected when the server returns a redirect (HTTP 302):
+
+From `src/http.ts:74`:
+
+```typescript
+if (res.statusCode === 302 || res.statusCode === 301) {
+  reject(
+    new Error(
+      `Redirect detected (status ${res.statusCode}). Authentication failed. ` +
+        `Check your API credentials. Location: ${res.headers.location}`,
+    ),
+  );
+  return;
+}
+```
+
+### Handling Authentication Errors
+
+```typescript
+try {
+  await client.vps.list();
+} catch (err) {
+  if (err instanceof Error && err.message.includes('Redirect detected')) {
+    // Authentication failed - credentials are invalid
+    console.error('Invalid API credentials');
+    process.exit(1);
+  }
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always Use Type Guards">
+    Check error types before accessing properties:
+    
+    ```typescript
+    if (err instanceof VirtualizorApiError) {
+      console.error(`Error code: ${err.code}`);
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Log Error Details">
+    Include both the error code and message in logs:
+    
+    ```typescript
+    if (err instanceof VirtualizorApiError) {
+      logger.error('API error', { code: err.code, message: err.message });
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Don't Swallow Errors">
+    Re-throw errors you can't handle:
+    
+    ```typescript
+    if (err instanceof VirtualizorApiError && err.code === 404) {
+      return null; // Handle gracefully
+    }
+    throw err; // Re-throw other errors
+    ```
+  </Accordion>
+  
+  <Accordion title="Validate Task IDs">
+    Check for task IDs before polling:
+    
+    ```typescript
+    const result = await client.vps.start('123');
+    if (!result.taskid) {
+      throw new Error('No task ID returned');
+    }
+    await client.tasks.wait(result.taskid);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Debugging Errors
+
+Enable debug mode to see raw API responses:
+
+```typescript
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+  debug: true, // Enable debug logging
+});
+
+// When errors occur, you'll see:
+// [Virtualizor] Raw response (first 500 chars): ...
+```
+
+This helps diagnose issues with malformed responses or unexpected API behavior.

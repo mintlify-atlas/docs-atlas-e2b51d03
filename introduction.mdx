@@ -1,0 +1,91 @@
+---
+title: Introduction
+description: A TypeScript-first SDK for managing Virtualizor VPS instances, users, and plans
+---
+
+## What is VirtualizorJS?
+
+VirtualizorJS is a **TypeScript-first SDK** for the [Virtualizor](https://www.virtualizor.com/) server management API. It provides a clean, type-safe interface for managing VPS instances, users, and plans with zero production dependencies.
+
+Whether you're building a hosting control panel, automating VPS deployments, or integrating Virtualizor into your infrastructure, VirtualizorJS makes it easy with a modern, developer-friendly API.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="VPS Management" icon="server">
+    Create, start, stop, restart, rebuild, clone, and migrate VPS instances. Full support for all core VPS operations with type-safe parameters.
+  </Card>
+  
+  <Card title="User Management" icon="users">
+    Manage users with create, delete, suspend, and unsuspend operations. Perfect for building hosting platforms and user portals.
+  </Card>
+  
+  <Card title="Plan Management" icon="layer-group">
+    Create and manage hosting plans with full control over resource allocation and pricing.
+  </Card>
+  
+  <Card title="Task Polling" icon="clock">
+    Built-in support for polling asynchronous operations. Wait for VPS operations to complete with configurable intervals and timeouts.
+  </Card>
+</CardGroup>
+
+## Why VirtualizorJS?
+
+<CardGroup cols={2}>
+  <Card title="Type-Safe" icon="shield-check">
+    Full TypeScript support with complete type definitions for all API operations, parameters, and responses.
+  </Card>
+  
+  <Card title="Zero Dependencies" icon="feather">
+    No production dependencies means a smaller bundle size and fewer security concerns.
+  </Card>
+  
+  <Card title="Namespaced API" icon="folder-tree">
+    Clean, organized API with separate namespaces for VPS, users, plans, and tasks.
+  </Card>
+  
+  <Card title="Built for Bun & Node" icon="bolt">
+    Works seamlessly with both Bun and Node.js runtimes.
+  </Card>
+</CardGroup>
+
+## Quick Example
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+});
+
+// List all VPS instances
+const vpsList = await client.vps.list();
+
+// Start a VPS and wait for it to complete
+const result = await client.vps.start('123');
+const task = await client.tasks.wait(result.taskid!);
+
+console.log(`VPS started! Task status: ${task.status}`);
+```
+
+## Get Started
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install VirtualizorJS with npm, yarn, pnpm, or bun
+  </Card>
+  
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get up and running in minutes with our step-by-step guide
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api/client">
+    Explore the complete API documentation
+  </Card>
+  
+  <Card title="GitHub" icon="github" href="https://github.com/kkMihai/virtualizorjs">
+    View the source code and contribute
+  </Card>
+</CardGroup>

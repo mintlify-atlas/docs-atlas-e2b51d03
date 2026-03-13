@@ -1,0 +1,260 @@
+---
+title: TasksResource
+description: Track and wait for asynchronous operations in Virtualizor
+---
+
+The `TasksResource` class provides methods to monitor asynchronous operations like VPS creation, migration, and user management.
+
+## Overview
+
+Many Virtualizor operations are asynchronous and return an `AsyncTaskResult` object containing a task ID. Use the `TasksResource` methods to check task status and wait for completion.
+
+```typescript
+// Example: Create VPS and wait for completion
+const result = await virtualizor.vps.create({
+  hostname: 'web-server.example.com',
+  rootpass: 'SecureP@ssw0rd',
+  osid: 270,
+  plid: 5,
+});
+
+// Wait for the task to complete
+const task = await virtualizor.tasks.wait(result.done.taskid);
+console.log('Task completed:', task);
+```
+
+## Methods
+
+### get()
+
+Get the current status of a task.
+
+<ParamField path="taskId" type="string" required>
+  The task ID to retrieve
+</ParamField>
+
+<ResponseField name="return" type="Promise<Task | undefined>">
+  Task object if found, undefined otherwise
+  
+  <Expandable title="Task properties">
+    <ResponseField name="id" type="string">
+      Task ID
+    </ResponseField>
+    <ResponseField name="action" type="string">
+      Action being performed
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      Task status: `'1'` or `'done'` for success, `'error'` or `'-1'` for failure, other values indicate in-progress
+    </ResponseField>
+    <ResponseField name="vpsid" type="string">
+      Associated VPS ID (if applicable)
+    </ResponseField>
+    <ResponseField name="data" type="unknown">
+      Additional task data
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```typescript
+const task = await virtualizor.tasks.get('12345');
+
+if (task) {
+  console.log(`Task ${task.id} status: ${task.status}`);
+  console.log(`Action: ${task.action}`);
+} else {
+  console.log('Task not found');
+}
+```
+
+---
+
+### wait()
+
+Poll a task until it completes or times out. This is the recommended way to handle asynchronous operations.
+
+<ParamField path="taskId" type="string" required>
+  The task ID to wait for
+</ParamField>
+
+<ParamField path="options" type="object" optional>
+  Polling configuration options
+  
+  <Expandable title="properties">
+    <ParamField path="pollIntervalMs" type="number" default="2000">
+      Interval between status checks in milliseconds
+    </ParamField>
+    <ParamField path="timeoutMs" type="number" default="120000">
+      Maximum time to wait in milliseconds (default: 2 minutes)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="Promise<Task>">
+  Completed task object
+</ResponseField>
+
+<ResponseField name="throws" type="Error">
+  Throws if task fails, times out, or is not found
+</ResponseField>
+
+```typescript
+// Wait with default settings (2s interval, 2 min timeout)
+const task = await virtualizor.tasks.wait('12345');
+
+// Custom polling configuration
+const task = await virtualizor.tasks.wait('12345', {
+  pollIntervalMs: 5000, // Check every 5 seconds
+  timeoutMs: 300000,    // Wait up to 5 minutes
+});
+
+console.log('Task completed successfully');
+```
+
+## Task Status Values
+
+The `status` field in a `Task` object indicates its current state:
+
+- `'1'` or `'done'`: Task completed successfully
+- `'error'` or `'-1'`: Task failed
+- Other values: Task is still in progress
+
+## Error Handling
+
+The `wait()` method throws errors in the following cases:
+
+```typescript
+try {
+  const task = await virtualizor.tasks.wait('12345');
+  console.log('Task succeeded');
+} catch (error) {
+  if (error.message.includes('not found')) {
+    console.error('Task does not exist');
+  } else if (error.message.includes('failed')) {
+    console.error('Task failed:', error.message);
+  } else if (error.message.includes('timed out')) {
+    console.error('Task took too long to complete');
+  }
+}
+```
+
+## Common Usage Patterns
+
+### VPS Operations
+
+```typescript
+// Start a VPS and wait for it to boot
+const startResult = await virtualizor.vps.start('1234');
+const startTask = await virtualizor.tasks.wait(startResult.done.taskid);
+console.log('VPS started');
+
+// Create a VPS with custom timeout
+const createResult = await virtualizor.vps.create({
+  hostname: 'new-vps.example.com',
+  rootpass: 'SecureP@ssw0rd',
+  osid: 270,
+  plid: 5,
+});
+
+const createTask = await virtualizor.tasks.wait(
+  createResult.done.taskid,
+  { timeoutMs: 600000 } // 10 minutes for VPS creation
+);
+console.log('VPS created:', createTask.vpsid);
+```
+
+### Migration Operations
+
+```typescript
+// Migrate VPS with extended timeout
+const migrateResult = await virtualizor.vps.migrate('1234', {
+  serid: 2,
+  from_ip: '192.168.1.100',
+  from_pass: 'password',
+  online: 1,
+});
+
+const migrateTask = await virtualizor.tasks.wait(
+  migrateResult.done.taskid,
+  {
+    pollIntervalMs: 10000, // Check every 10 seconds
+    timeoutMs: 1800000,    // 30 minute timeout
+  }
+);
+
+console.log('Migration completed');
+```
+
+### Parallel Operations
+
+```typescript
+// Start multiple VPS instances in parallel
+const vpsIds = ['1234', '1235', '1236'];
+
+const startResults = await Promise.all(
+  vpsIds.map((id) => virtualizor.vps.start(id))
+);
+
+// Wait for all tasks to complete
+const tasks = await Promise.all(
+  startResults.map((result) =>
+    virtualizor.tasks.wait(result.done.taskid)
+  )
+);
+
+console.log(`Started ${tasks.length} VPS instances`);
+```
+
+### Manual Polling
+
+For custom polling logic, use `get()` directly:
+
+```typescript
+const taskId = '12345';
+let attempts = 0;
+const maxAttempts = 60;
+
+while (attempts < maxAttempts) {
+  const task = await virtualizor.tasks.get(taskId);
+  
+  if (!task) {
+    throw new Error('Task not found');
+  }
+  
+  if (task.status === '1' || task.status === 'done') {
+    console.log('Task completed successfully');
+    break;
+  }
+  
+  if (task.status === 'error' || task.status === '-1') {
+    throw new Error('Task failed');
+  }
+  
+  console.log(`Attempt ${attempts + 1}: Task still running...`);
+  await new Promise((r) => setTimeout(r, 2000));
+  attempts++;
+}
+
+if (attempts === maxAttempts) {
+  throw new Error('Task timed out');
+}
+```
+
+## Configuration Defaults
+
+Default polling configuration:
+
+```typescript
+const DEFAULT_TASK_POLLING = {
+  pollIntervalMs: 2000,   // 2 seconds
+  timeoutMs: 120000,      // 2 minutes
+};
+```
+
+You can override these defaults by passing options to `wait()`:
+
+```typescript
+await virtualizor.tasks.wait(taskId, {
+  pollIntervalMs: 1000,  // Check every second
+  timeoutMs: 60000,      // 1 minute timeout
+});
+```

@@ -1,0 +1,267 @@
+---
+title: 'Plan Types'
+description: 'Type definitions for VPS plan management operations'
+---
+
+## Overview
+
+Types and interfaces for managing VPS plans in Virtualizor.
+
+## Plan
+
+The main Plan object representing a VPS resource plan.
+
+```typescript
+export interface Plan {
+  pid: string;
+  plan_name: string;
+  disk: string;
+  ram: string;
+  bandwidth: string;
+  cpu: string;
+  virt?: string;
+}
+```
+
+<ResponseField name="pid" type="string" required>
+  Unique identifier for the plan
+</ResponseField>
+
+<ResponseField name="plan_name" type="string" required>
+  Name of the plan
+</ResponseField>
+
+<ResponseField name="disk" type="string" required>
+  Disk space allocation in GB
+</ResponseField>
+
+<ResponseField name="ram" type="string" required>
+  RAM allocation in MB
+</ResponseField>
+
+<ResponseField name="bandwidth" type="string" required>
+  Bandwidth allocation in GB
+</ResponseField>
+
+<ResponseField name="cpu" type="string" required>
+  CPU cores allocated
+</ResponseField>
+
+<ResponseField name="virt" type="string" optional>
+  Virtualization type (kvm, xen, openvz, etc.)
+</ResponseField>
+
+## CreatePlanParams
+
+Parameters for creating a new VPS plan.
+
+```typescript
+export interface CreatePlanParams {
+  plan_name: string;
+  disk: number;
+  ram: number;
+  bandwidth: number;
+  cpu: number;
+  virt?: string;
+  [key: string]: unknown;
+}
+```
+
+<ResponseField name="plan_name" type="string" required>
+  Name for the new plan
+</ResponseField>
+
+<ResponseField name="disk" type="number" required>
+  Disk space in GB
+</ResponseField>
+
+<ResponseField name="ram" type="number" required>
+  RAM in MB
+</ResponseField>
+
+<ResponseField name="bandwidth" type="number" required>
+  Bandwidth in GB
+</ResponseField>
+
+<ResponseField name="cpu" type="number" required>
+  Number of CPU cores
+</ResponseField>
+
+<ResponseField name="virt" type="string" optional>
+  Virtualization type (e.g., 'kvm', 'xen', 'openvz')
+</ResponseField>
+
+## Usage Examples
+
+### Importing Types
+
+```typescript
+import type { Plan, CreatePlanParams } from 'virtualizor';
+```
+
+### Creating a Plan
+
+```typescript
+import type { CreatePlanParams } from 'virtualizor';
+
+const planParams: CreatePlanParams = {
+  plan_name: 'Basic VPS',
+  disk: 50,
+  ram: 2048,
+  bandwidth: 1000,
+  cpu: 2,
+  virt: 'kvm'
+};
+
+const result = await client.plans.create(planParams);
+```
+
+### Working with Plan Data
+
+```typescript
+import type { Plan } from 'virtualizor';
+
+function displayPlanInfo(plan: Plan): string {
+  return [
+    `Plan: ${plan.plan_name} (ID: ${plan.pid})`,
+    `Resources:`,
+    `  - CPU: ${plan.cpu} cores`,
+    `  - RAM: ${plan.ram} MB`,
+    `  - Disk: ${plan.disk} GB`,
+    `  - Bandwidth: ${plan.bandwidth} GB`,
+    plan.virt ? `  - Virtualization: ${plan.virt}` : ''
+  ].filter(Boolean).join('\n');
+}
+
+const plan: Plan = {
+  pid: '1',
+  plan_name: 'Basic VPS',
+  disk: '50',
+  ram: '2048',
+  bandwidth: '1000',
+  cpu: '2',
+  virt: 'kvm'
+};
+
+console.log(displayPlanInfo(plan));
+```
+
+### Comparing Plans
+
+```typescript
+import type { Plan } from 'virtualizor';
+
+function comparePlans(plan1: Plan, plan2: Plan): string {
+  const toNumber = (value: string) => parseInt(value, 10);
+  
+  const ram1 = toNumber(plan1.ram);
+  const ram2 = toNumber(plan2.ram);
+  const disk1 = toNumber(plan1.disk);
+  const disk2 = toNumber(plan2.disk);
+  
+  if (ram1 > ram2 && disk1 > disk2) {
+    return `${plan1.plan_name} has more resources than ${plan2.plan_name}`;
+  } else if (ram1 < ram2 && disk1 < disk2) {
+    return `${plan2.plan_name} has more resources than ${plan1.plan_name}`;
+  } else {
+    return `${plan1.plan_name} and ${plan2.plan_name} have similar resources`;
+  }
+}
+```
+
+### Creating Tiered Plans
+
+```typescript
+import type { CreatePlanParams } from 'virtualizor';
+
+const planTiers: CreatePlanParams[] = [
+  {
+    plan_name: 'Starter',
+    disk: 25,
+    ram: 1024,
+    bandwidth: 500,
+    cpu: 1,
+    virt: 'kvm'
+  },
+  {
+    plan_name: 'Professional',
+    disk: 50,
+    ram: 2048,
+    bandwidth: 1000,
+    cpu: 2,
+    virt: 'kvm'
+  },
+  {
+    plan_name: 'Enterprise',
+    disk: 100,
+    ram: 4096,
+    bandwidth: 2000,
+    cpu: 4,
+    virt: 'kvm'
+  }
+];
+
+for (const tier of planTiers) {
+  await client.plans.create(tier);
+  console.log(`Created plan: ${tier.plan_name}`);
+}
+```
+
+### Validating Plan Parameters
+
+```typescript
+import type { CreatePlanParams } from 'virtualizor';
+
+function validatePlanParams(params: CreatePlanParams): boolean {
+  if (params.ram < 512) {
+    throw new Error('Minimum RAM is 512 MB');
+  }
+  
+  if (params.disk < 10) {
+    throw new Error('Minimum disk space is 10 GB');
+  }
+  
+  if (params.cpu < 1) {
+    throw new Error('Minimum CPU is 1 core');
+  }
+  
+  if (params.bandwidth < 100) {
+    throw new Error('Minimum bandwidth is 100 GB');
+  }
+  
+  return true;
+}
+
+const params: CreatePlanParams = {
+  plan_name: 'Custom Plan',
+  disk: 50,
+  ram: 2048,
+  bandwidth: 1000,
+  cpu: 2
+};
+
+if (validatePlanParams(params)) {
+  await client.plans.create(params);
+}
+```
+
+### Filtering Plans by Virtualization
+
+```typescript
+import type { Plan } from 'virtualizor';
+
+interface PlanListResponse {
+  plans: Record<string, Plan>;
+}
+
+async function getPlansByVirt(virtType: string): Promise<Plan[]> {
+  const response = await client.plans.list() as PlanListResponse;
+  
+  return Object.values(response.plans).filter(
+    (plan) => plan.virt === virtType
+  );
+}
+
+const kvmPlans = await getPlansByVirt('kvm');
+console.log(`Found ${kvmPlans.length} KVM plans`);
+```

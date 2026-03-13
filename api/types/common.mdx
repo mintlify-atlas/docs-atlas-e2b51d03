@@ -1,0 +1,189 @@
+---
+title: 'Common Types'
+description: 'Core types and interfaces used across the VirtualizorJS SDK'
+---
+
+## Overview
+
+Common types shared across the VirtualizorJS SDK for responses, errors, and general API structures.
+
+## VirtualizorResponse
+
+Base response interface returned by most Virtualizor API calls.
+
+```typescript
+export interface VirtualizorResponse {
+  title?: string;
+  timenow?: number;
+  time_taken?: string;
+  error?: VirtualizorError[];
+}
+```
+
+<ResponseField name="title" type="string" optional>
+  Response title from the API
+</ResponseField>
+
+<ResponseField name="timenow" type="number" optional>
+  Unix timestamp of when the response was generated
+</ResponseField>
+
+<ResponseField name="time_taken" type="string" optional>
+  Time taken to process the request
+</ResponseField>
+
+<ResponseField name="error" type="VirtualizorError[]" optional>
+  Array of errors if the request failed
+</ResponseField>
+
+## VirtualizorError
+
+Error object returned when API requests fail.
+
+```typescript
+export interface VirtualizorError {
+  code: number;
+  msg: string;
+}
+```
+
+<ResponseField name="code" type="number">
+  Error code identifying the type of error
+</ResponseField>
+
+<ResponseField name="msg" type="string">
+  Human-readable error message
+</ResponseField>
+
+## AsyncTaskResult
+
+Response type for asynchronous operations that return a task ID.
+
+```typescript
+export interface AsyncTaskResult extends VirtualizorResponse {
+  done?: 1;
+  taskid?: string;
+}
+```
+
+<ResponseField name="done" type="1" optional>
+  Set to 1 when the task is complete
+</ResponseField>
+
+<ResponseField name="taskid" type="string" optional>
+  Unique identifier for the asynchronous task
+</ResponseField>
+
+<ResponseField name="...VirtualizorResponse" type="VirtualizorResponse">
+  Inherits all fields from VirtualizorResponse
+</ResponseField>
+
+## VirtType
+
+Virtualization technology type supported by Virtualizor.
+
+```typescript
+export type VirtType =
+  | 'kvm'
+  | 'xen'
+  | 'openvz'
+  | 'lxc'
+  | 'proxmox'
+  | 'virtuozzo'
+  | 'xcp'
+  | 'hyperv';
+```
+
+### Supported Values
+
+- `kvm` - Kernel-based Virtual Machine
+- `xen` - Xen hypervisor
+- `openvz` - OpenVZ container-based virtualization
+- `lxc` - Linux Containers
+- `proxmox` - Proxmox VE
+- `virtuozzo` - Virtuozzo containers
+- `xcp` - XCP-ng / Xen Cloud Platform
+- `hyperv` - Microsoft Hyper-V
+
+## ApiParams
+
+Generic parameter type for API requests.
+
+```typescript
+export type ApiParams = Record<string, unknown>;
+```
+
+A flexible key-value object type used for passing parameters to API methods.
+
+## Usage Examples
+
+### Importing Types
+
+```typescript
+import type {
+  VirtualizorResponse,
+  VirtualizorError,
+  AsyncTaskResult,
+  VirtType,
+  ApiParams
+} from 'virtualizor';
+```
+
+### Type Guards
+
+```typescript
+import type { VirtualizorResponse } from 'virtualizor';
+
+function hasError(response: VirtualizorResponse): boolean {
+  return !!response.error && response.error.length > 0;
+}
+
+function getErrorMessage(response: VirtualizorResponse): string | null {
+  if (hasError(response) && response.error) {
+    return response.error[0].msg;
+  }
+  return null;
+}
+```
+
+### Working with Async Tasks
+
+```typescript
+import type { AsyncTaskResult } from 'virtualizor';
+
+function isTaskComplete(result: AsyncTaskResult): boolean {
+  return result.done === 1;
+}
+
+const taskResult = await client.vps.rebuild(vpsId, {
+  osid: 123,
+  newpass: 'newpassword',
+  conf: 1
+});
+
+if (isTaskComplete(taskResult)) {
+  console.log('Task completed immediately');
+} else if (taskResult.taskid) {
+  console.log(`Task started with ID: ${taskResult.taskid}`);
+  // Poll for task completion
+}
+```
+
+### Specifying Virtualization Type
+
+```typescript
+import type { VirtType, CreateVPSParams } from 'virtualizor';
+
+const virt: VirtType = 'kvm';
+
+const params: CreateVPSParams = {
+  hostname: 'vps.example.com',
+  rootpass: 'password',
+  osid: 123,
+  virt: virt,
+  ram: 2048,
+  space: 50
+};
+
+await client.vps.create(params);
+```

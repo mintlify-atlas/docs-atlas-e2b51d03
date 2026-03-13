@@ -1,0 +1,208 @@
+---
+title: 'Client'
+description: 'VirtualizorClient class and client creation'
+---
+
+# VirtualizorClient
+
+The main client class for interacting with the Virtualizor API. Provides access to all resource endpoints through dedicated resource objects.
+
+## Class Structure
+
+```typescript
+class VirtualizorClient {
+  readonly vps: VpsResource;
+  readonly users: UsersResource;
+  readonly plans: PlansResource;
+  readonly tasks: TasksResource;
+
+  constructor(config: VirtualizorConfig): VirtualizorClient;
+}
+```
+
+## Resources
+
+The client exposes four main resource properties for managing different aspects of your Virtualizor infrastructure:
+
+### vps
+
+Access to VPS management operations. Use this to create, list, modify, start, stop, and manage virtual private servers.
+
+```typescript
+client.vps.list()
+client.vps.get(vpsId)
+client.vps.create(params)
+client.vps.start(vpsId)
+```
+
+### users
+
+Access to user management operations. Use this to create, list, and manage Virtualizor users.
+
+```typescript
+client.users.list()
+client.users.get(userId)
+client.users.create(params)
+```
+
+### plans
+
+Access to plan management operations. Use this to create, list, and manage VPS plans.
+
+```typescript
+client.plans.list()
+client.plans.get(planId)
+client.plans.create(params)
+```
+
+### tasks
+
+Access to task monitoring operations. Use this to check the status of asynchronous operations.
+
+```typescript
+client.tasks.get(taskId)
+client.tasks.wait(taskId)
+```
+
+## Constructor
+
+<ParamField path="config" type="VirtualizorConfig" required>
+  Configuration object for the Virtualizor client.
+
+  <Expandable title="VirtualizorConfig properties">
+    <ParamField path="host" type="string" required>
+      The hostname or IP address of your Virtualizor server (without protocol or port).
+      
+      Example: `"virt.example.com"` or `"192.168.1.100"`
+    </ParamField>
+
+    <ParamField path="apiKey" type="string" required>
+      Your Virtualizor API key for authentication.
+    </ParamField>
+
+    <ParamField path="apiPass" type="string">
+      Your Virtualizor API password. Optional, defaults to empty string.
+    </ParamField>
+
+    <ParamField path="port" type="number" default={4085}>
+      The port number for the Virtualizor API.
+    </ParamField>
+
+    <ParamField path="https" type="boolean" default={true}>
+      Whether to use HTTPS for API requests.
+    </ParamField>
+
+    <ParamField path="rejectUnauthorized" type="boolean" default={false}>
+      Whether to reject self-signed SSL certificates. Set to `true` in production with valid certificates.
+    </ParamField>
+
+    <ParamField path="timeout" type="number" default={30000}>
+      Request timeout in milliseconds.
+    </ParamField>
+
+    <ParamField path="debug" type="boolean" default={false}>
+      Enable debug logging for API requests and responses.
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+## createVirtualizorClient()
+
+Factory function to create a new VirtualizorClient instance. This is the recommended way to instantiate the client.
+
+```typescript
+function createVirtualizorClient(config: VirtualizorConfig): VirtualizorClient
+```
+
+### Parameters
+
+<ParamField path="config" type="VirtualizorConfig" required>
+  Configuration object for the Virtualizor client. See [Constructor](#constructor) for details.
+</ParamField>
+
+### Returns
+
+Returns a new `VirtualizorClient` instance.
+
+## Examples
+
+### Basic Client Creation
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'virt.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-password'
+});
+```
+
+### Client with Custom Configuration
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: '192.168.1.100',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-password',
+  port: 4085,
+  https: true,
+  rejectUnauthorized: true,
+  timeout: 60000,
+  debug: true
+});
+```
+
+### Using the Client
+
+```typescript
+// Create a client
+const client = createVirtualizorClient({
+  host: 'virt.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-password'
+});
+
+// Use the resource properties
+const vpsList = await client.vps.list();
+const user = await client.users.get('123');
+const plan = await client.plans.get('456');
+const task = await client.tasks.get('789');
+```
+
+### Constructor vs Factory Function
+
+Both approaches work identically:
+
+```typescript
+import { VirtualizorClient, createVirtualizorClient } from 'virtualizorjs';
+
+// Using the constructor
+const client1 = new VirtualizorClient({
+  host: 'virt.example.com',
+  apiKey: 'your-api-key'
+});
+
+// Using the factory function (recommended)
+const client2 = createVirtualizorClient({
+  host: 'virt.example.com',
+  apiKey: 'your-api-key'
+});
+```
+
+## Type Definition
+
+```typescript
+interface VirtualizorConfig {
+  host: string;
+  apiKey: string;
+  apiPass?: string;
+  port?: number;
+  https?: boolean;
+  rejectUnauthorized?: boolean;
+  timeout?: number;
+  debug?: boolean;
+}
+```

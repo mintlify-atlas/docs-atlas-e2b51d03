@@ -1,80 +1,323 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get started with VirtualizorJS in minutes
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through the basics of using VirtualizorJS to manage your Virtualizor VPS instances. You'll learn how to create a client, list VPS instances, and perform common operations.
 
-### Step 1: Set up your local environment
+<Steps>
+  <Step title="Install VirtualizorJS">
+    First, install VirtualizorJS using your preferred package manager:
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+    <CodeGroup>
 
-### Step 2: Deploy your changes
+    ```bash npm
+    npm install virtualizorjs
+    ```
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash yarn
+    yarn add virtualizorjs
+    ```
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+    ```bash pnpm
+    pnpm add virtualizorjs
+    ```
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+    ```bash bun
+    bun add virtualizorjs
+    ```
 
-### Step 3: Go live
+    </CodeGroup>
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+    See the [Installation](/installation) guide for more details.
+  </Step>
 
-## Next steps
+  <Step title="Create a Client">
+    Import and create a Virtualizor client with your API credentials:
 
-Now that you have your docs running, explore these key features:
+    ```typescript
+    import { createVirtualizorClient } from 'virtualizorjs';
+
+    const client = createVirtualizorClient({
+      host: 'virtualizor.example.com',
+      apiKey: 'your-api-key',
+      apiPass: 'your-api-pass',
+      // Optional configuration:
+      port: 4085,           // Default: 4085 for HTTPS, 4084 for HTTP
+      https: true,          // Default: true
+      rejectUnauthorized: false,  // Default: false (allows self-signed certs)
+      timeout: 30000,       // Default: 30000ms (30 seconds)
+    });
+    ```
+
+    <Note>
+      **Self-Signed Certificates**: Virtualizor typically uses self-signed SSL certificates. The SDK handles this by default with `rejectUnauthorized: false`. If you need to enforce certificate validation, set `rejectUnauthorized: true`.
+    </Note>
+
+    <Tip>
+      Store your credentials in environment variables for security:
+      ```typescript
+      const client = createVirtualizorClient({
+        host: process.env.VIRTUALIZOR_HOST!,
+        apiKey: process.env.VIRTUALIZOR_API_KEY!,
+        apiPass: process.env.VIRTUALIZOR_API_PASS!,
+      });
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="List VPS Instances">
+    Retrieve all VPS instances from your Virtualizor server:
+
+    ```typescript
+    import { createVirtualizorClient, VirtualizorApiError } from 'virtualizorjs';
+
+    const client = createVirtualizorClient({
+      host: 'your-server.example.com',
+      apiKey: 'your-api-key',
+      apiPass: 'your-api-pass',
+    });
+
+    async function main() {
+      try {
+        const vpsList = await client.vps.list();
+
+        console.log('VPS Instances:');
+        for (const [vpsid, vps] of Object.entries(vpsList)) {
+          console.log(`  ${vpsid}: ${vps.hostname}`);
+          console.log(`    OS: ${vps.os_name}`);
+          console.log(`    Status: ${vps.status}`);
+        }
+      } catch (error) {
+        if (error instanceof VirtualizorApiError) {
+          console.error(`API Error [${error.code}]: ${error.message}`);
+        } else {
+          console.error('Unexpected error:', error);
+        }
+      }
+    }
+
+    main();
+    ```
+
+    The `client.vps.list()` method returns a record where keys are VPS IDs and values are VPS objects.
+  </Step>
+
+  <Step title="Perform VPS Operations">
+    VirtualizorJS supports all common VPS operations. Most operations are **asynchronous** and return a task ID that you can poll for completion.
+
+    ### Start a VPS
+
+    ```typescript
+    // Start a VPS
+    const result = await client.vps.start('123');
+    console.log(`Task ID: ${result.taskid}`);
+    ```
+
+    ### Stop a VPS
+
+    ```typescript
+    // Stop a VPS (graceful shutdown)
+    const result = await client.vps.stop('123');
+
+    // Or power off immediately
+    const poweroffResult = await client.vps.poweroff('123');
+    ```
+
+    ### Restart a VPS
+
+    ```typescript
+    const result = await client.vps.restart('123');
+    ```
+
+    ### Get VPS Details
+
+    ```typescript
+    const vps = await client.vps.get('123');
+    console.log(`Hostname: ${vps.hostname}`);
+    console.log(`OS: ${vps.os_name}`);
+    console.log(`Status: ${vps.status}`);
+    ```
+
+    <Note>
+      Most VPS operations like `start()`, `stop()`, `restart()`, `create()`, `rebuild()`, etc. are asynchronous and return an `AsyncTaskResult` with a `taskid`. Use the tasks API to poll for completion.
+    </Note>
+  </Step>
+
+  <Step title="Poll for Task Completion">
+    Many Virtualizor operations are asynchronous. Use the `client.tasks.wait()` method to poll until an operation completes:
+
+    ```typescript
+    import { createVirtualizorClient, VirtualizorApiError } from 'virtualizorjs';
+
+    const client = createVirtualizorClient({
+      host: 'your-server.example.com',
+      apiKey: 'your-api-key',
+      apiPass: 'your-api-pass',
+    });
+
+    async function main() {
+      try {
+        console.log('Starting VPS...');
+        const result = await client.vps.start('123');
+
+        const taskId = result.taskid;
+        if (!taskId) {
+          console.log('No task ID returned');
+          return;
+        }
+
+        console.log(`Task ID: ${taskId}`);
+        console.log('Waiting for task completion...');
+
+        // Poll with custom options
+        const taskResult = await client.tasks.wait(taskId, {
+          pollIntervalMs: 2000,  // Check every 2 seconds (default)
+          timeoutMs: 60000,      // Timeout after 60 seconds
+        });
+
+        if (taskResult.status === '1' || taskResult.status === 'done') {
+          console.log('VPS started successfully!');
+        } else {
+          console.log('Task completed with status:', taskResult.status);
+        }
+      } catch (error) {
+        if (error instanceof VirtualizorApiError) {
+          console.error(`API Error [${error.code}]: ${error.message}`);
+        } else if (error instanceof Error && error.message.includes('timeout')) {
+          console.error('Task polling timed out');
+        } else {
+          console.error('Unexpected error:', error);
+        }
+      }
+    }
+
+    main();
+    ```
+
+    ### Polling Options
+
+    The `wait()` method accepts optional configuration:
+
+    | Option | Type | Default | Description |
+    |--------|------|---------|-------------|
+    | `pollIntervalMs` | `number` | `2000` | How often to check task status (in milliseconds) |
+    | `timeoutMs` | `number` | `120000` | Maximum time to wait before timing out (in milliseconds) |
+
+    <Tip>
+      For long-running operations like VPS creation or migration, increase the `timeoutMs` value:
+      ```typescript
+      const task = await client.tasks.wait(taskId, {
+        pollIntervalMs: 5000,   // Check every 5 seconds
+        timeoutMs: 300000,      // Wait up to 5 minutes
+      });
+      ```
+    </Tip>
+  </Step>
+
+  <Step title="Error Handling">
+    All SDK errors are instances of `VirtualizorApiError`. Always catch and handle errors appropriately:
+
+    ```typescript
+    import { VirtualizorApiError } from 'virtualizorjs';
+
+    try {
+      await client.vps.start('invalid-id');
+    } catch (err) {
+      if (err instanceof VirtualizorApiError) {
+        console.error(`API Error [${err.code}]: ${err.message}`);
+        // Handle API-specific errors
+      } else {
+        console.error('Unexpected error:', err);
+        // Handle other errors
+      }
+    }
+    ```
+
+    The `VirtualizorApiError` class includes:
+    - `message`: Human-readable error description
+    - `code`: Virtualizor API error code
+    - Additional context from the API response
+  </Step>
+</Steps>
+
+## Complete Example
+
+Here's a complete example that creates a VPS, waits for creation to complete, and then starts it:
+
+```typescript
+import { createVirtualizorClient, VirtualizorApiError } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'your-server.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+});
+
+async function createAndStartVPS() {
+  try {
+    // Create a VPS
+    console.log('Creating VPS...');
+    const createResult = await client.vps.create({
+      hostname: 'my-vps.example.com',
+      rootpass: 'SecurePassword123!',
+      osid: 1,  // OS template ID
+    });
+
+    // Wait for creation to complete
+    console.log(`VPS creation task initiated: ${createResult.taskid}`);
+    const createTask = await client.tasks.wait(createResult.taskid!, {
+      pollIntervalMs: 5000,
+      timeoutMs: 300000,  // 5 minutes
+    });
+
+    console.log('VPS created successfully!');
+
+    // Get the new VPS ID from the task result
+    // (You'll need to parse this from the task response)
+    const newVpsId = '123';  // Replace with actual VPS ID
+
+    // Start the VPS
+    console.log('Starting VPS...');
+    const startResult = await client.vps.start(newVpsId);
+    await client.tasks.wait(startResult.taskid!);
+
+    console.log('VPS is now running!');
+
+    // Get VPS details
+    const vps = await client.vps.get(newVpsId);
+    console.log(`Hostname: ${vps.hostname}`);
+    console.log(`Status: ${vps.status}`);
+  } catch (error) {
+    if (error instanceof VirtualizorApiError) {
+      console.error(`API Error [${error.code}]: ${error.message}`);
+    } else {
+      console.error('Unexpected error:', error);
+    }
+  }
+}
+
+createAndStartVPS();
+```
+
+## Next Steps
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="Core Concepts" icon="brain" href="/core/configuration">
+    Learn about the client, resources, and configuration options
+  </Card>
+  
+  <Card title="VPS Management" icon="server" href="/api/resources/vps">
+    Explore all VPS management operations
+  </Card>
+  
+  <Card title="Task Polling" icon="clock" href="/core/task-polling">
+    Deep dive into asynchronous task handling
+  </Card>
+  
+  <Card title="Error Handling" icon="triangle-exclamation" href="/core/error-handling">
+    Learn best practices for handling errors
+  </Card>
 </CardGroup>
-
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>

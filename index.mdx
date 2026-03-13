@@ -1,97 +1,121 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "VirtualizorJS"
+description: "TypeScript-first SDK for Virtualizor server management with comprehensive VPS control"
 ---
 
-## Setting up
+<div className="flex flex-col items-center justify-center text-center py-12">
+  <h1 className="text-5xl font-bold mb-4">
+    VirtualizorJS
+  </h1>
+  <p className="text-xl mb-8 max-w-2xl">
+    A TypeScript-first SDK for the Virtualizor server management API. Manage VPS instances, users, and plans with a clean, namespaced interface and zero production dependencies.
+  </p>
+  
+  <div className="flex gap-4 mb-12">
+    <a href="/quickstart" className="px-6 py-3 rounded-md font-semibold" style={{backgroundColor: '#238636', color: '#ffffff'}}>
+      Get Started
+    </a>
+    <a href="https://github.com/kkMihai/virtualizorjs" className="px-6 py-3 rounded-md font-semibold border" style={{borderColor: '#60639d', color: '#ffffff'}}>
+      View on GitHub
+    </a>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+## Key Features
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
-
-## Make it yours
-
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
+<CardGroup cols={2}>
+  <Card title="VPS Lifecycle Management" icon="server">
+    Create, start, stop, restart, rebuild, clone, and migrate VPS instances with simple, type-safe methods
   </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
+  <Card title="Full TypeScript Support" icon="code">
+    Comprehensive type definitions for all resources, parameters, and responses
   </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
+  <Card title="Async Task Polling" icon="clock">
+    Built-in task polling with configurable intervals to track long-running operations
   </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
+  <Card title="Zero Dependencies" icon="feather">
+    No production dependencies - lightweight and fast with minimal bundle size
   </Card>
-</Columns>
+</CardGroup>
 
-## Create beautiful pages
+## Quick Example
 
-Everything you need to create world-class documentation.
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+});
 
-## Need inspiration?
+// List all VPS instances
+const vpsList = await client.vps.list();
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+// Start a VPS and wait for completion
+const result = await client.vps.start('123');
+const task = await client.tasks.wait(result.taskid!);
+
+console.log(`VPS started! Task status: ${task.status}`);
+```
+
+## What You Can Do
+
+<CardGroup cols={3}>
+  <Card title="VPS Operations" icon="server" href="/api/resources/vps">
+    Manage virtual servers with 15+ operations including start, stop, rebuild, and migrate
+  </Card>
+  <Card title="User Management" icon="users" href="/api/resources/users">
+    Create, suspend, and manage Virtualizor users programmatically
+  </Card>
+  <Card title="Plan Management" icon="layer-group" href="/api/resources/plans">
+    Configure and manage VPS plans and resource allocations
+  </Card>
+  <Card title="Task Tracking" icon="list-check" href="/api/resources/tasks">
+    Poll and monitor asynchronous operations with built-in task management
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/core/error-handling">
+    Robust error handling with custom VirtualizorApiError exceptions
+  </Card>
+  <Card title="Configuration" icon="gear" href="/core/configuration">
+    Flexible configuration with SSL support and custom timeouts
+  </Card>
+</CardGroup>
+
+## Get Started
+
+<Steps>
+  <Step title="Install the package">
+    Install VirtualizorJS using your preferred package manager
+    ```bash
+    npm install virtualizorjs
+    ```
+  </Step>
+  <Step title="Configure your client">
+    Create a client instance with your Virtualizor credentials
+    ```typescript
+    const client = createVirtualizorClient({
+      host: 'virtualizor.example.com',
+      apiKey: 'your-api-key',
+      apiPass: 'your-api-pass',
+    });
+    ```
+  </Step>
+  <Step title="Start managing VPS">
+    Use the client to manage your virtual servers
+    ```typescript
+    const vpsList = await client.vps.list();
+    ```
+  </Step>
+</Steps>
+
+## Ready to dive in?
+
+<CardGroup cols={2}>
+  <Card title="Quickstart Guide" icon="rocket" href="/quickstart">
+    Get up and running in minutes with our quickstart guide
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/client">
+    Explore the complete API documentation
+  </Card>
+</CardGroup>

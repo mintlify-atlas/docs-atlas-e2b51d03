@@ -1,0 +1,544 @@
+---
+title: VpsResource
+description: Manage virtual private servers (VPS) in Virtualizor
+---
+
+The `VpsResource` class provides methods to create, manage, and monitor VPS instances.
+
+## Methods
+
+### list()
+
+List all VPS instances with optional filters.
+
+<ParamField path="filters" type="ListVPSParams" optional>
+  Filtering options for VPS listing
+  
+  <Expandable title="properties">
+    <ParamField path="user" type="string | number">
+      Filter by user ID
+    </ParamField>
+    <ParamField path="vpsid" type="string | number">
+      Filter by VPS ID
+    </ParamField>
+    <ParamField path="vpsname" type="string">
+      Filter by VPS name
+    </ParamField>
+    <ParamField path="vpsip" type="string">
+      Filter by IP address
+    </ParamField>
+    <ParamField path="vpshostname" type="string">
+      Filter by hostname
+    </ParamField>
+    <ParamField path="vsstatus" type="string">
+      Filter by status
+    </ParamField>
+    <ParamField path="vstype" type="VirtType">
+      Filter by virtualization type (kvm, openvz, xen, etc.)
+    </ParamField>
+    <ParamField path="serid" type="number">
+      Filter by server ID
+    </ParamField>
+    <ParamField path="plid" type="number">
+      Filter by plan ID
+    </ParamField>
+    <ParamField path="bpid" type="number">
+      Filter by billing plan ID
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="Promise<Record<string, VPS>>">
+  Object mapping VPS IDs to VPS objects
+</ResponseField>
+
+```typescript
+const allVps = await virtualizor.vps.list();
+
+// Filter by user
+const userVps = await virtualizor.vps.list({ user: '123' });
+
+// Filter by virtualization type
+const kvmVps = await virtualizor.vps.list({ vstype: 'kvm' });
+```
+
+---
+
+### get()
+
+Get details of a specific VPS by ID.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to retrieve
+</ParamField>
+
+<ResponseField name="return" type="Promise<VPS>">
+  VPS object containing all VPS details
+</ResponseField>
+
+```typescript
+const vps = await virtualizor.vps.get('1234');
+console.log(vps.hostname, vps.ram, vps.os_name);
+```
+
+---
+
+### create()
+
+Create a new VPS instance. Returns an async task result.
+
+<ParamField path="params" type="CreateVPSParams" required>
+  VPS creation parameters
+  
+  <Expandable title="properties">
+    <ParamField path="hostname" type="string" required>
+      Hostname for the VPS
+    </ParamField>
+    <ParamField path="rootpass" type="string" required>
+      Root password for the VPS
+    </ParamField>
+    <ParamField path="osid" type="number" required>
+      OS template ID to use
+    </ParamField>
+    <ParamField path="plid" type="number">
+      Plan ID to use
+    </ParamField>
+    <ParamField path="user_email" type="string">
+      User email address
+    </ParamField>
+    <ParamField path="ips" type="number">
+      Number of IPv4 addresses
+    </ParamField>
+    <ParamField path="ips_int" type="number">
+      Number of internal IPs
+    </ParamField>
+    <ParamField path="space" type="number">
+      Disk space in GB
+    </ParamField>
+    <ParamField path="ram" type="number">
+      RAM in MB
+    </ParamField>
+    <ParamField path="burst" type="number">
+      Burst RAM in MB
+    </ParamField>
+    <ParamField path="bandwidth" type="number">
+      Bandwidth in GB
+    </ParamField>
+    <ParamField path="cpu" type="number">
+      Number of CPU cores
+    </ParamField>
+    <ParamField path="cpu_percent" type="number">
+      CPU percentage limit
+    </ParamField>
+    <ParamField path="virt" type="VirtType">
+      Virtualization type (kvm, openvz, xen, etc.)
+    </ParamField>
+    <ParamField path="serid" type="number">
+      Server ID to create VPS on
+    </ParamField>
+    <ParamField path="node_select" type="0 | 1">
+      Enable automatic node selection
+    </ParamField>
+    <ParamField path="recipe" type="number">
+      Recipe ID to execute after creation
+    </ParamField>
+    <ParamField path="sshkey" type="string">
+      SSH public key to inject
+    </ParamField>
+    <ParamField path="nopassword" type="0 | 1">
+      Disable password authentication (SSH key only)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.create({
+  hostname: 'web-server-01.example.com',
+  rootpass: 'SecureP@ssw0rd',
+  osid: 270, // Ubuntu 22.04
+  plid: 5,
+  space: 50,
+  ram: 2048,
+  bandwidth: 1000,
+  cpu: 2,
+  ips: 1,
+});
+
+// Wait for creation to complete
+const task = await virtualizor.tasks.wait(result.done.taskid);
+console.log('VPS created successfully:', task);
+```
+
+---
+
+### delete()
+
+Delete a VPS instance. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to delete
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.delete('1234');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### start()
+
+Start a stopped VPS. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to start
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.start('1234');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### stop()
+
+Gracefully stop a running VPS. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to stop
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.stop('1234');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### restart()
+
+Restart a VPS. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to restart
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.restart('1234');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### poweroff()
+
+Force power off a VPS (immediate shutdown). Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to power off
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.poweroff('1234');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### suspend()
+
+Suspend a VPS, preventing it from being started. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to suspend
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.suspend('1234');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### unsuspend()
+
+Remove suspension from a VPS. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to unsuspend
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.unsuspend('1234');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### rebuild()
+
+Reinstall a VPS with a new OS template. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to rebuild
+</ParamField>
+
+<ParamField path="params" type="RebuildVPSParams" required>
+  Rebuild parameters
+  
+  <Expandable title="properties">
+    <ParamField path="osid" type="number" required>
+      OS template ID to rebuild with
+    </ParamField>
+    <ParamField path="newpass" type="string" required>
+      New root password for the VPS
+    </ParamField>
+    <ParamField path="conf" type="1" required>
+      Must be set to 1 to confirm the rebuild
+    </ParamField>
+    <ParamField path="format_primary" type="0 | 1">
+      Format primary disk (0 = no, 1 = yes); defaults to 0
+    </ParamField>
+    <ParamField path="eu_send_rebuild_email" type="0 | 1">
+      Send rebuild notification email (0 = no, 1 = yes)
+    </ParamField>
+    <ParamField path="recipe" type="number">
+      Recipe ID to apply post-rebuild
+    </ParamField>
+    <ParamField path="sshkey" type="string">
+      SSH key to inject
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.rebuild('1234', {
+  osid: 270, // Ubuntu 22.04
+  newpass: 'NewSecureP@ssw0rd',
+  conf: 1,
+  format_primary: 1,
+  eu_send_rebuild_email: 1,
+});
+
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### clone()
+
+Clone a VPS to create a copy on another server. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to clone
+</ParamField>
+
+<ParamField path="params" type="CloneVPSParams" required>
+  Clone parameters
+  
+  <Expandable title="properties">
+    <ParamField path="hostname" type="string" required>
+      Hostname for the new cloned VPS
+    </ParamField>
+    <ParamField path="rootpass" type="string" required>
+      Root password for the new cloned VPS
+    </ParamField>
+    <ParamField path="from_server" type="number" required>
+      Source server ID (server where the VPS lives)
+    </ParamField>
+    <ParamField path="to_server" type="number" required>
+      Destination server ID (server to clone into)
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.clone('1234', {
+  hostname: 'web-server-01-clone.example.com',
+  rootpass: 'SecureP@ssw0rd',
+  from_server: 1,
+  to_server: 2,
+});
+
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### migrate()
+
+Migrate a VPS from one server to another. Returns an async task result.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to migrate
+</ParamField>
+
+<ParamField path="params" type="MigrateVPSParams" required>
+  Migration parameters
+  
+  <Expandable title="properties">
+    <ParamField path="serid" type="number" required>
+      Destination server ID
+    </ParamField>
+    <ParamField path="from_ip" type="string" required>
+      Source server IP address
+    </ParamField>
+    <ParamField path="from_pass" type="string" required>
+      Source server API/root password
+    </ParamField>
+    <ParamField path="ignore_if_vdfconflict" type="0 | 1">
+      0 = ignore VDF conflicts, 1 = error on conflict
+    </ParamField>
+    <ParamField path="disable_gzip" type="0 | 1">
+      0 = use gzip compression, 1 = disable gzip
+    </ParamField>
+    <ParamField path="online" type="0 | 1">
+      0 = offline migration, 1 = live migration
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.vps.migrate('1234', {
+  serid: 2,
+  from_ip: '192.168.1.100',
+  from_pass: 'source_server_password',
+  online: 1, // Live migration
+});
+
+const task = await virtualizor.tasks.wait(result.done.taskid);
+```
+
+---
+
+### status()
+
+Get the current runtime status of a VPS.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to check status for
+</ParamField>
+
+<ResponseField name="return" type="Promise<unknown>">
+  Status information object
+</ResponseField>
+
+```typescript
+const status = await virtualizor.vps.status('1234');
+console.log('VPS Status:', status);
+```
+
+---
+
+### vnc()
+
+Get VNC connection information for a VPS.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to get VNC info for
+</ParamField>
+
+<ResponseField name="return" type="Promise<VNCInfo>">
+  VNC connection information
+  
+  <Expandable title="properties">
+    <ResponseField name="novnc" type="string">
+      NoVNC web console URL
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```typescript
+const vncInfo = await virtualizor.vps.vnc('1234');
+console.log('VNC Console URL:', vncInfo.novnc);
+```
+
+---
+
+### stats()
+
+Get usage statistics for a VPS.
+
+<ParamField path="vpsId" type="string" required>
+  The VPS ID to get stats for
+</ParamField>
+
+<ResponseField name="return" type="Promise<VPSStatsResponse>">
+  Statistics object containing usage metrics
+  
+  <Expandable title="properties">
+    <ResponseField name="vs_stats" type="unknown">
+      VPS statistics data
+    </ResponseField>
+    <ResponseField name="vs_bandwidth" type="unknown">
+      Bandwidth usage data
+    </ResponseField>
+    <ResponseField name="time_taken" type="string">
+      API request time
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```typescript
+const stats = await virtualizor.vps.stats('1234');
+console.log('VPS Statistics:', stats);
+```
+
+## Async Operations
+
+Many VPS operations (create, delete, start, stop, restart, poweroff, suspend, unsuspend, rebuild, clone, migrate) return `AsyncTaskResult` objects. Use the `tasks.wait()` method to poll for completion:
+
+```typescript
+// Start a VPS and wait for completion
+const result = await virtualizor.vps.start('1234');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+
+if (task.status === '1' || task.status === 'done') {
+  console.log('VPS started successfully');
+}
+```

@@ -1,0 +1,164 @@
+---
+title: 'Authentication'
+description: 'Learn how to authenticate with the Virtualizor API using API keys'
+icon: 'key'
+---
+
+## Overview
+
+VirtualizorJS uses API key-based authentication to securely connect to your Virtualizor server. Authentication credentials are passed with every API request to verify your identity and permissions.
+
+## Authentication Methods
+
+Virtualizor requires two pieces of information for API authentication:
+
+- **API Key** (`apiKey`): A unique identifier for your API credentials
+- **API Password** (`apiPass`): A secret password paired with the API key
+
+Both credentials are sent as query parameters (`adminapikey` and `adminapipass`) with each request to the Virtualizor API.
+
+## Obtaining API Credentials
+
+To get your API credentials from the Virtualizor admin panel:
+
+<Steps>
+  <Step title="Access the Admin Panel">
+    Log in to your Virtualizor admin panel at `https://your-server:4085/`
+  </Step>
+  
+  <Step title="Navigate to Configuration">
+    Go to **Configuration** > **API Credentials** in the admin menu
+  </Step>
+  
+  <Step title="Generate or View Credentials">
+    Create a new API key or view existing credentials. Copy both the API key and API password.
+  </Step>
+</Steps>
+
+<Warning>
+  Keep your API credentials secure. Anyone with access to both the API key and password can perform administrative actions on your Virtualizor server.
+</Warning>
+
+## Creating an Authenticated Client
+
+Use the `createVirtualizorClient` function to initialize an authenticated client:
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-password',
+});
+```
+
+The client automatically includes authentication credentials in all API requests.
+
+## Environment Variables (Recommended)
+
+For security best practices, store credentials in environment variables instead of hardcoding them:
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: process.env.VIRTUALIZOR_HOST!,
+  apiKey: process.env.VIRTUALIZOR_API_KEY!,
+  apiPass: process.env.VIRTUALIZOR_API_PASS!,
+});
+```
+
+**Example `.env` file:**
+
+```bash
+VIRTUALIZOR_HOST=virtualizor.example.com
+VIRTUALIZOR_API_KEY=your-api-key
+VIRTUALIZOR_API_PASS=your-api-password
+```
+
+<Note>
+  Don't forget to add `.env` to your `.gitignore` file to prevent accidentally committing sensitive credentials to version control.
+</Note>
+
+## Authentication Errors
+
+If authentication fails, you'll typically receive one of these errors:
+
+### Redirect Error (302)
+
+When credentials are invalid, Virtualizor returns a 302 redirect:
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+try {
+  const client = createVirtualizorClient({
+    host: 'virtualizor.example.com',
+    apiKey: 'wrong-key',
+    apiPass: 'wrong-password',
+  });
+  
+  await client.vps.list();
+} catch (error) {
+  // Error: Redirect detected (status 302). Authentication failed.
+  // Check your API credentials.
+  console.error(error);
+}
+```
+
+### Common Authentication Issues
+
+- **Invalid credentials**: Double-check that your API key and password are correct
+- **Expired credentials**: API credentials may have been revoked or expired
+- **IP restrictions**: Some Virtualizor installations may restrict API access by IP address
+- **Disabled API access**: Verify that API access is enabled in the Virtualizor configuration
+
+## Security Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Environment Variables">
+    Never hardcode API credentials in your source code. Use environment variables or a secrets management system.
+  </Accordion>
+  
+  <Accordion title="Rotate Credentials Regularly">
+    Periodically generate new API credentials and update your applications to use them.
+  </Accordion>
+  
+  <Accordion title="Limit Credential Scope">
+    If Virtualizor supports it, create API credentials with the minimum required permissions for your use case.
+  </Accordion>
+  
+  <Accordion title="Use HTTPS">
+    Always connect to Virtualizor over HTTPS (port 4085) to encrypt credentials in transit.
+  </Accordion>
+  
+  <Accordion title="Monitor API Usage">
+    Regularly review API access logs to detect unauthorized or suspicious activity.
+  </Accordion>
+</AccordionGroup>
+
+## How Authentication Works Internally
+
+The SDK handles authentication automatically by:
+
+1. Accepting credentials in the client configuration
+2. Building query strings with `adminapikey` and `adminapipass` parameters
+3. Including these parameters in every API request
+
+From `src/auth.ts:3`:
+
+```typescript
+export function buildQueryString(params: ApiParams, apiKey: string, apiPass: string): string {
+  const urlParams = new URLSearchParams();
+  urlParams.set('api', 'json');
+  urlParams.set('adminapikey', apiKey);
+  urlParams.set('adminapipass', apiPass);
+  
+  // ... additional parameters
+  
+  return `?${urlParams.toString()}`;
+}
+```
+
+You don't need to manage this manually—the SDK handles it for you.

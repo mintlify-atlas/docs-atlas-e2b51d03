@@ -1,0 +1,169 @@
+---
+title: UsersResource
+description: Manage Virtualizor users
+---
+
+The `UsersResource` class provides methods to manage users in Virtualizor.
+
+## Methods
+
+### list()
+
+List all users in the Virtualizor system.
+
+<ResponseField name="return" type="Promise<Record<string, User>>">
+  Object mapping user IDs to user objects
+  
+  <Expandable title="User properties">
+    <ResponseField name="uid" type="string">
+      User ID
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      User email address
+    </ResponseField>
+    <ResponseField name="fname" type="string">
+      First name
+    </ResponseField>
+    <ResponseField name="lname" type="string">
+      Last name
+    </ResponseField>
+    <ResponseField name="status" type="string">
+      User account status
+    </ResponseField>
+    <ResponseField name="type" type="string">
+      User account type
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+```typescript
+const users = await virtualizor.users.list();
+
+for (const [uid, user] of Object.entries(users)) {
+  console.log(`${uid}: ${user.email} (${user.fname} ${user.lname})`);
+}
+```
+
+---
+
+### create()
+
+Create a new user account. Returns an async task result.
+
+<ParamField path="params" type="CreateUserParams" required>
+  User creation parameters
+  
+  <Expandable title="properties">
+    <ParamField path="email" type="string" required>
+      User email address
+    </ParamField>
+    <ParamField path="password" type="string" required>
+      User password
+    </ParamField>
+    <ParamField path="fname" type="string">
+      First name
+    </ParamField>
+    <ParamField path="lname" type="string">
+      Last name
+    </ParamField>
+    <ParamField path="acttype" type="number">
+      Account type
+    </ParamField>
+  </Expandable>
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.users.create({
+  email: 'john.doe@example.com',
+  password: 'SecureP@ssw0rd123',
+  fname: 'John',
+  lname: 'Doe',
+});
+
+const task = await virtualizor.tasks.wait(result.done.taskid);
+console.log('User created successfully');
+```
+
+---
+
+### delete()
+
+Delete a user account. Returns an async task result.
+
+<ParamField path="uid" type="string" required>
+  User ID to delete
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.users.delete('123');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+console.log('User deleted successfully');
+```
+
+---
+
+### suspend()
+
+Suspend a user account, preventing login. Returns an async task result.
+
+<ParamField path="uid" type="string" required>
+  User ID to suspend
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.users.suspend('123');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+console.log('User suspended successfully');
+```
+
+---
+
+### unsuspend()
+
+Remove suspension from a user account. Returns an async task result.
+
+<ParamField path="uid" type="string" required>
+  User ID to unsuspend
+</ParamField>
+
+<ResponseField name="return" type="Promise<AsyncTaskResult>">
+  Async task result with task ID for tracking
+</ResponseField>
+
+```typescript
+const result = await virtualizor.users.unsuspend('123');
+const task = await virtualizor.tasks.wait(result.done.taskid);
+console.log('User unsuspended successfully');
+```
+
+## Async Operations
+
+All user management operations (create, delete, suspend, unsuspend) return `AsyncTaskResult` objects. Use the `tasks.wait()` method to poll for completion:
+
+```typescript
+const result = await virtualizor.users.create({
+  email: 'jane.smith@example.com',
+  password: 'SecureP@ssw0rd456',
+  fname: 'Jane',
+  lname: 'Smith',
+});
+
+// Wait for completion
+const task = await virtualizor.tasks.wait(result.done.taskid);
+
+if (task.status === '1' || task.status === 'done') {
+  console.log('User created successfully');
+}
+```

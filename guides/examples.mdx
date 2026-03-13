@@ -1,0 +1,916 @@
+---
+title: 'Examples'
+description: 'Real-world examples and common patterns for using VirtualizorJS'
+icon: 'code'
+---
+
+This guide provides comprehensive examples for common VirtualizorJS operations. All examples use actual SDK methods and demonstrate best practices.
+
+## Getting Started
+
+### Client Initialization
+
+Before using any of the examples below, you'll need to create a client:
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+  port: 4085,        // 4085 for HTTPS, 4084 for HTTP
+  https: true,       // Use HTTPS (default)
+  timeout: 30000,    // Request timeout in ms
+});
+```
+
+## VPS Management
+
+<AccordionGroup>
+
+<Accordion title="List All VPS" icon="list">
+
+Retrieve a list of all VPS instances:
+
+```typescript
+// List all VPS
+const vpsList = await client.vps.list();
+
+for (const [vpsId, vps] of Object.entries(vpsList)) {
+  console.log(`VPS ID: ${vpsId}`);
+  console.log(`  Hostname: ${vps.hostname}`);
+  console.log(`  OS: ${vps.os_name}`);
+  console.log(`  RAM: ${vps.ram}`);
+  console.log(`  Bandwidth: ${vps.bandwidth}`);
+  console.log(`  Status: ${vps.suspended ? 'Suspended' : 'Active'}`);
+}
+```
+
+You can also filter VPS by various criteria:
+
+```typescript
+// Filter by user
+const userVps = await client.vps.list({ user: '123' });
+
+// Filter by VPS name
+const namedVps = await client.vps.list({ vpsname: 'web-server' });
+
+// Filter by virtualization type
+const kvmVps = await client.vps.list({ vstype: 'kvm' });
+
+// Filter by server ID
+const serverVps = await client.vps.list({ serid: 5 });
+```
+
+</Accordion>
+
+<Accordion title="Get VPS Details" icon="server">
+
+Retrieve detailed information about a specific VPS:
+
+```typescript
+const vpsId = '123';
+const vps = await client.vps.get(vpsId);
+
+console.log(`VPS Details for ${vps.hostname}:`);
+console.log(`  VPS ID: ${vps.vpsid}`);
+console.log(`  Operating System: ${vps.os_name}`);
+console.log(`  RAM: ${vps.ram} MB`);
+console.log(`  Disk Space: ${vps.space} GB`);
+console.log(`  Bandwidth: ${vps.bandwidth} GB`);
+console.log(`  CPU Cores: ${vps.cores}`);
+console.log(`  Virtualization: ${vps.virt}`);
+
+// Access IP addresses
+if (vps.ips) {
+  console.log('IP Addresses:');
+  for (const [ip, details] of Object.entries(vps.ips)) {
+    console.log(`  - ${ip}`);
+  }
+}
+```
+
+</Accordion>
+
+<Accordion title="Create a New VPS" icon="plus">
+
+Create a new VPS instance with custom specifications:
+
+<CodeGroup>
+
+```typescript Basic Creation
+import { VirtualizorApiError } from 'virtualizorjs';
+
+try {
+  // Create VPS
+  const result = await client.vps.create({
+    hostname: 'my-new-server.example.com',
+    rootpass: 'SecurePassword123!',
+    osid: 123,              // OS template ID
+    plid: 1,                // Plan ID
+    user_email: 'user@example.com',
+    ips: 1,                 // Number of IPv4 addresses
+    space: 50,              // Disk space in GB
+    ram: 2048,              // RAM in MB
+    bandwidth: 500,         // Bandwidth in GB
+    cpu: 2,                 // CPU cores
+    virt: 'kvm',            // Virtualization type
+  });
+
+  console.log('VPS creation initiated!');
+  console.log(`Task ID: ${result.taskid}`);
+
+  // Wait for the task to complete
+  const task = await client.tasks.wait(result.taskid!, {
+    pollIntervalMs: 5000,   // Check every 5 seconds
+    timeoutMs: 600000,      // Timeout after 10 minutes
+  });
+
+  console.log('VPS created successfully!');
+  console.log(`Task status: ${task.status}`);
+
+} catch (err) {
+  if (err instanceof VirtualizorApiError) {
+    console.error(`API Error [${err.code}]: ${err.message}`);
+  } else {
+    console.error('Unexpected error:', err);
+  }
+}
+```
+
+```typescript Advanced Options
+// Create VPS with SSH key and recipe
+const result = await client.vps.create({
+  hostname: 'app-server.example.com',
+  rootpass: 'SecurePassword123!',
+  osid: 456,
+  plid: 2,
+  user_email: 'admin@example.com',
+  
+  // Resource allocation
+  space: 100,
+  ram: 4096,
+  burst: 512,             // Burst RAM
+  bandwidth: 1000,
+  cpu: 4,
+  cpu_percent: 100,       // CPU percentage
+  
+  // Network configuration
+  ips: 2,                 // Multiple IPs
+  ips_int: 1,             // Internal IPs
+  
+  // Advanced options
+  virt: 'kvm',
+  serid: 5,               // Specific server
+  recipe: 10,             // Post-install recipe
+  sshkey: 'ssh-rsa AAAAB3NzaC1yc2E...',
+  nopassword: 0,          // Keep password authentication
+});
+
+await client.tasks.wait(result.taskid!);
+console.log('Advanced VPS created successfully!');
+```
+
+</CodeGroup>
+
+</Accordion>
+
+<Accordion title="Start, Stop, and Restart VPS" icon="power-off">
+
+Control VPS power state with task polling:
+
+<Tabs>
+
+<Tab title="Start VPS">
+
+```typescript
+const vpsId = '123';
+
+try {
+  console.log(`Starting VPS ${vpsId}...`);
+  
+  const result = await client.vps.start(vpsId);
+  
+  // Wait for the operation to complete
+  const task = await client.tasks.wait(result.taskid!, {
+    pollIntervalMs: 2000,   // Check every 2 seconds
+    timeoutMs: 120000,      // 2 minute timeout
+  });
+  
+  if (task.status === '1' || task.status === 'done') {
+    console.log('VPS started successfully!');
+  }
+  
+} catch (err) {
+  console.error('Failed to start VPS:', err);
+}
+```
+
+</Tab>
+
+<Tab title="Stop VPS">
+
+```typescript
+const vpsId = '123';
+
+try {
+  console.log(`Stopping VPS ${vpsId}...`);
+  
+  // Graceful shutdown
+  const result = await client.vps.stop(vpsId);
+  
+  const task = await client.tasks.wait(result.taskid!);
+  console.log('VPS stopped successfully!');
+  
+} catch (err) {
+  console.error('Failed to stop VPS:', err);
+}
+```
+
+</Tab>
+
+<Tab title="Restart VPS">
+
+```typescript
+const vpsId = '123';
+
+try {
+  console.log(`Restarting VPS ${vpsId}...`);
+  
+  const result = await client.vps.restart(vpsId);
+  
+  const task = await client.tasks.wait(result.taskid!, {
+    pollIntervalMs: 3000,
+    timeoutMs: 180000,      // 3 minute timeout
+  });
+  
+  console.log('VPS restarted successfully!');
+  
+} catch (err) {
+  console.error('Failed to restart VPS:', err);
+}
+```
+
+</Tab>
+
+<Tab title="Force Power Off">
+
+```typescript
+const vpsId = '123';
+
+try {
+  console.log(`Force powering off VPS ${vpsId}...`);
+  
+  // Force shutdown (like pulling the plug)
+  const result = await client.vps.poweroff(vpsId);
+  
+  const task = await client.tasks.wait(result.taskid!);
+  console.log('VPS powered off!');
+  
+} catch (err) {
+  console.error('Failed to power off VPS:', err);
+}
+```
+
+</Tab>
+
+</Tabs>
+
+</Accordion>
+
+<Accordion title="Suspend and Unsuspend VPS" icon="pause">
+
+Temporarily suspend or restore VPS access:
+
+```typescript
+const vpsId = '123';
+
+// Suspend a VPS
+console.log('Suspending VPS...');
+const suspendResult = await client.vps.suspend(vpsId);
+await client.tasks.wait(suspendResult.taskid!);
+console.log('VPS suspended');
+
+// Later, unsuspend the VPS
+console.log('Unsuspending VPS...');
+const unsuspendResult = await client.vps.unsuspend(vpsId);
+await client.tasks.wait(unsuspendResult.taskid!);
+console.log('VPS restored');
+```
+
+</Accordion>
+
+<Accordion title="Rebuild VPS" icon="rotate">
+
+Rebuild a VPS with a new operating system:
+
+```typescript
+const vpsId = '123';
+
+const result = await client.vps.rebuild(vpsId, {
+  osid: 789,                          // New OS template ID
+  newpass: 'NewSecurePassword456!',    // New root password
+  conf: 1,                            // Confirm rebuild (required)
+  format_primary: 1,                  // Format primary disk
+  eu_send_rebuild_email: 1,           // Send notification email
+  recipe: 15,                         // Post-rebuild recipe (optional)
+  sshkey: 'ssh-rsa AAAAB3NzaC1...',   // SSH key (optional)
+});
+
+console.log('Rebuild initiated...');
+
+// Wait for rebuild to complete (this can take a while)
+const task = await client.tasks.wait(result.taskid!, {
+  pollIntervalMs: 10000,    // Check every 10 seconds
+  timeoutMs: 900000,        // 15 minute timeout
+});
+
+console.log('VPS rebuilt successfully!');
+```
+
+<Warning>
+Rebuilding a VPS will **destroy all data** on the instance. Make sure to backup important data before proceeding.
+</Warning>
+
+</Accordion>
+
+<Accordion title="Clone VPS" icon="clone">
+
+Clone an existing VPS to a new instance:
+
+```typescript
+const sourceVpsId = '123';
+
+const result = await client.vps.clone(sourceVpsId, {
+  hostname: 'cloned-server.example.com',
+  rootpass: 'ClonedPassword789!',
+  from_server: 5,           // Source server ID
+  to_server: 8,             // Destination server ID
+});
+
+console.log('Cloning VPS...');
+
+const task = await client.tasks.wait(result.taskid!, {
+  pollIntervalMs: 10000,
+  timeoutMs: 1200000,       // 20 minute timeout
+});
+
+console.log('VPS cloned successfully!');
+```
+
+</Accordion>
+
+<Accordion title="Migrate VPS" icon="truck">
+
+Migrate a VPS to a different server:
+
+```typescript
+const vpsId = '123';
+
+const result = await client.vps.migrate(vpsId, {
+  serid: 10,                           // Destination server ID
+  from_ip: '192.168.1.100',            // Source server IP
+  from_pass: 'source-server-password',  // Source server password
+  online: 1,                           // Live migration (1) or offline (0)
+  disable_gzip: 0,                     // Use compression
+  ignore_if_vdfconflict: 0,            // Error on VDF conflicts
+});
+
+console.log('Migrating VPS...');
+
+const task = await client.tasks.wait(result.taskid!, {
+  pollIntervalMs: 15000,    // Check every 15 seconds
+  timeoutMs: 1800000,       // 30 minute timeout
+});
+
+console.log('VPS migrated successfully!');
+```
+
+</Accordion>
+
+<Accordion title="Delete VPS" icon="trash">
+
+Permanently delete a VPS instance:
+
+```typescript
+import { VirtualizorApiError } from 'virtualizorjs';
+
+const vpsId = '123';
+
+try {
+  console.log(`Deleting VPS ${vpsId}...`);
+  
+  const result = await client.vps.delete(vpsId);
+  
+  const task = await client.tasks.wait(result.taskid!, {
+    pollIntervalMs: 5000,
+    timeoutMs: 300000,      // 5 minute timeout
+  });
+  
+  console.log('VPS deleted successfully!');
+  
+} catch (err) {
+  if (err instanceof VirtualizorApiError) {
+    console.error(`Failed to delete VPS: ${err.message}`);
+  }
+}
+```
+
+<Warning>
+Deleting a VPS is **irreversible**. All data will be permanently lost.
+</Warning>
+
+</Accordion>
+
+<Accordion title="Get VNC Access" icon="desktop">
+
+Get VNC connection details for remote access:
+
+```typescript
+const vpsId = '123';
+
+const vncInfo = await client.vps.vnc(vpsId);
+
+console.log('VNC Connection Details:');
+console.log(`URL: ${vncInfo.novnc}`);
+
+// Open in browser or use in VNC client
+// The novnc field contains the full URL to access the VPS console
+```
+
+</Accordion>
+
+<Accordion title="Get VPS Statistics" icon="chart-line">
+
+Retrieve resource usage statistics for a VPS:
+
+```typescript
+const vpsId = '123';
+
+const stats = await client.vps.stats(vpsId);
+
+console.log('VPS Statistics:');
+console.log(`Stats: ${JSON.stringify(stats.vs_stats, null, 2)}`);
+console.log(`Bandwidth: ${JSON.stringify(stats.vs_bandwidth, null, 2)}`);
+console.log(`Time taken: ${stats.time_taken}`);
+```
+
+</Accordion>
+
+<Accordion title="Check VPS Status" icon="circle-check">
+
+Get the current operational status of a VPS:
+
+```typescript
+const vpsId = '123';
+
+const status = await client.vps.status(vpsId);
+
+console.log('Current VPS Status:');
+console.log(JSON.stringify(status, null, 2));
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## User Management
+
+<AccordionGroup>
+
+<Accordion title="List All Users" icon="users">
+
+Retrieve a list of all users:
+
+```typescript
+const users = await client.users.list();
+
+for (const [uid, user] of Object.entries(users)) {
+  console.log(`User ID: ${uid}`);
+  console.log(`  Email: ${user.email}`);
+  console.log(`  Name: ${user.fname} ${user.lname}`);
+  console.log(`  Status: ${user.status}`);
+  console.log(`  Type: ${user.type}`);
+}
+```
+
+</Accordion>
+
+<Accordion title="Create a New User" icon="user-plus">
+
+Create a new user account:
+
+```typescript
+const result = await client.users.create({
+  email: 'newuser@example.com',
+  password: 'SecureUserPassword123!',
+  fname: 'John',
+  lname: 'Doe',
+  acttype: 1,               // Account type
+});
+
+console.log('User creation initiated');
+
+// Wait for user creation to complete
+const task = await client.tasks.wait(result.taskid!);
+
+console.log('User created successfully!');
+```
+
+</Accordion>
+
+<Accordion title="Suspend and Unsuspend User" icon="user-lock">
+
+Temporarily suspend or restore user access:
+
+```typescript
+const userId = '456';
+
+// Suspend user
+console.log('Suspending user...');
+const suspendResult = await client.users.suspend(userId);
+await client.tasks.wait(suspendResult.taskid!);
+console.log('User suspended');
+
+// Later, unsuspend the user
+console.log('Unsuspending user...');
+const unsuspendResult = await client.users.unsuspend(userId);
+await client.tasks.wait(unsuspendResult.taskid!);
+console.log('User access restored');
+```
+
+</Accordion>
+
+<Accordion title="Delete a User" icon="user-minus">
+
+Permanently delete a user account:
+
+```typescript
+const userId = '456';
+
+console.log(`Deleting user ${userId}...`);
+
+const result = await client.users.delete(userId);
+
+const task = await client.tasks.wait(result.taskid!);
+
+console.log('User deleted successfully!');
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## Plan Management
+
+<AccordionGroup>
+
+<Accordion title="List All Plans" icon="layer-group">
+
+Retrieve a list of all hosting plans:
+
+```typescript
+const plans = await client.plans.list();
+
+for (const [planId, plan] of Object.entries(plans)) {
+  console.log(`Plan: ${plan.plan_name} (ID: ${planId})`);
+  console.log(`  Disk: ${plan.disk} GB`);
+  console.log(`  RAM: ${plan.ram} MB`);
+  console.log(`  Bandwidth: ${plan.bandwidth} GB`);
+  console.log(`  CPU: ${plan.cpu} cores`);
+  console.log(`  Virtualization: ${plan.virt}`);
+}
+```
+
+</Accordion>
+
+<Accordion title="Create a New Plan" icon="plus-circle">
+
+Create a new hosting plan:
+
+```typescript
+const result = await client.plans.create({
+  plan_name: 'Premium Plan',
+  disk: 100,                // Disk space in GB
+  ram: 4096,                // RAM in MB
+  bandwidth: 1000,          // Bandwidth in GB
+  cpu: 4,                   // CPU cores
+  virt: 'kvm',              // Virtualization type
+});
+
+console.log('Plan creation initiated');
+
+const task = await client.tasks.wait(result.taskid!);
+
+console.log('Plan created successfully!');
+```
+
+</Accordion>
+
+<Accordion title="Delete a Plan" icon="minus-circle">
+
+Delete an existing hosting plan:
+
+```typescript
+const planId = '789';
+
+console.log(`Deleting plan ${planId}...`);
+
+const result = await client.plans.delete(planId);
+
+const task = await client.tasks.wait(result.taskid!);
+
+console.log('Plan deleted successfully!');
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## Task Management
+
+<AccordionGroup>
+
+<Accordion title="Check Task Status" icon="clock">
+
+Check the status of a running task:
+
+```typescript
+const taskId = 'task_12345';
+
+const task = await client.tasks.get(taskId);
+
+if (task) {
+  console.log(`Task Status: ${task.status}`);
+  console.log(`Details: ${JSON.stringify(task, null, 2)}`);
+} else {
+  console.log('Task not found');
+}
+```
+
+</Accordion>
+
+<Accordion title="Wait for Task Completion" icon="hourglass">
+
+Poll a task until it completes:
+
+```typescript
+const taskId = 'task_12345';
+
+try {
+  const task = await client.tasks.wait(taskId, {
+    pollIntervalMs: 3000,    // Check every 3 seconds
+    timeoutMs: 180000,       // Timeout after 3 minutes
+  });
+  
+  console.log('Task completed!');
+  console.log(`Final status: ${task.status}`);
+  
+} catch (err) {
+  if (err.message.includes('timed out')) {
+    console.error('Task took too long to complete');
+  } else if (err.message.includes('failed')) {
+    console.error('Task failed');
+  } else {
+    console.error('Error:', err);
+  }
+}
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## Advanced Patterns
+
+<AccordionGroup>
+
+<Accordion title="Batch Operations" icon="layer-group">
+
+Perform operations on multiple VPS instances:
+
+```typescript
+const vpsIds = ['123', '456', '789'];
+
+// Start multiple VPS in parallel
+console.log('Starting multiple VPS...');
+
+const startPromises = vpsIds.map(async (vpsId) => {
+  try {
+    const result = await client.vps.start(vpsId);
+    await client.tasks.wait(result.taskid!);
+    console.log(`VPS ${vpsId} started successfully`);
+  } catch (err) {
+    console.error(`Failed to start VPS ${vpsId}:`, err);
+  }
+});
+
+await Promise.all(startPromises);
+console.log('All VPS started!');
+```
+
+</Accordion>
+
+<Accordion title="Error Handling Best Practices" icon="shield-check">
+
+Comprehensive error handling for production use:
+
+```typescript
+import { VirtualizorApiError } from 'virtualizorjs';
+
+async function createVpsWithRetry(params: any, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Attempt ${attempt} of ${maxRetries}`);
+      
+      const result = await client.vps.create(params);
+      
+      const task = await client.tasks.wait(result.taskid!, {
+        pollIntervalMs: 5000,
+        timeoutMs: 600000,
+      });
+      
+      console.log('VPS created successfully!');
+      return task;
+      
+    } catch (err) {
+      if (err instanceof VirtualizorApiError) {
+        console.error(`API Error [${err.code}]: ${err.message}`);
+        
+        // Don't retry on validation errors
+        if (err.code >= 400 && err.code < 500) {
+          throw err;
+        }
+      }
+      
+      if (attempt === maxRetries) {
+        console.error('Max retries reached');
+        throw err;
+      }
+      
+      // Wait before retrying
+      await new Promise(r => setTimeout(r, 5000 * attempt));
+    }
+  }
+}
+
+// Usage
+try {
+  await createVpsWithRetry({
+    hostname: 'resilient-server.example.com',
+    rootpass: 'SecurePassword123!',
+    osid: 123,
+    plid: 1,
+  });
+} catch (err) {
+  console.error('Failed to create VPS:', err);
+}
+```
+
+</Accordion>
+
+<Accordion title="Progress Monitoring" icon="spinner">
+
+Monitor long-running operations with progress updates:
+
+```typescript
+async function createVpsWithProgress(params: any) {
+  console.log('Creating VPS...');
+  const result = await client.vps.create(params);
+  
+  const taskId = result.taskid!;
+  console.log(`Task ID: ${taskId}`);
+  
+  const startTime = Date.now();
+  const pollInterval = 5000;
+  const timeout = 600000;
+  
+  while (Date.now() - startTime < timeout) {
+    const task = await client.tasks.get(taskId);
+    
+    if (!task) {
+      throw new Error('Task not found');
+    }
+    
+    const elapsed = Math.round((Date.now() - startTime) / 1000);
+    console.log(`[${elapsed}s] Task status: ${task.status}`);
+    
+    if (task.status === '1' || task.status === 'done') {
+      console.log('VPS created successfully!');
+      return task;
+    }
+    
+    if (task.status === 'error' || task.status === '-1') {
+      throw new Error('Task failed');
+    }
+    
+    await new Promise(r => setTimeout(r, pollInterval));
+  }
+  
+  throw new Error('Task timed out');
+}
+
+// Usage
+await createVpsWithProgress({
+  hostname: 'monitored-server.example.com',
+  rootpass: 'SecurePassword123!',
+  osid: 123,
+  plid: 1,
+});
+```
+
+</Accordion>
+
+<Accordion title="Resource Monitoring Loop" icon="chart-area">
+
+Continuously monitor VPS resources:
+
+```typescript
+async function monitorVPS(vpsId: string, durationMs: number) {
+  const startTime = Date.now();
+  const interval = 60000; // Check every minute
+  
+  console.log(`Monitoring VPS ${vpsId} for ${durationMs / 1000}s`);
+  
+  while (Date.now() - startTime < durationMs) {
+    try {
+      const stats = await client.vps.stats(vpsId);
+      const vps = await client.vps.get(vpsId);
+      
+      const timestamp = new Date().toISOString();
+      console.log(`[${timestamp}] ${vps.hostname}`);
+      console.log(`  Status: ${vps.suspended ? 'Suspended' : 'Active'}`);
+      console.log(`  Bandwidth used: ${vps.used_bandwidth} GB`);
+      
+    } catch (err) {
+      console.error('Error monitoring VPS:', err);
+    }
+    
+    await new Promise(r => setTimeout(r, interval));
+  }
+  
+  console.log('Monitoring complete');
+}
+
+// Monitor a VPS for 1 hour
+await monitorVPS('123', 3600000);
+```
+
+</Accordion>
+
+</AccordionGroup>
+
+## TypeScript Types
+
+VirtualizorJS is fully typed. Import types for better IDE support:
+
+```typescript
+import type {
+  VPS,
+  CreateVPSParams,
+  RebuildVPSParams,
+  CloneVPSParams,
+  MigrateVPSParams,
+  User,
+  CreateUserParams,
+  Plan,
+  CreatePlanParams,
+  Task,
+  AsyncTaskResult,
+  VirtType,
+} from 'virtualizorjs';
+
+// Use types in your functions
+async function getVPSInfo(vpsId: string): Promise<VPS> {
+  return await client.vps.get(vpsId);
+}
+
+function createVPSParams(): CreateVPSParams {
+  return {
+    hostname: 'typed-server.example.com',
+    rootpass: 'SecurePassword123!',
+    osid: 123,
+    plid: 1,
+    ram: 2048,
+    space: 50,
+  };
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="API Reference" icon="book" href="/api/client">
+    Explore the complete API documentation
+  </Card>
+  <Card title="Error Handling" icon="triangle-exclamation" href="/core/error-handling">
+    Learn about error handling strategies
+  </Card>
+  <Card title="Task Polling" icon="rotate" href="/core/task-polling">
+    Deep dive into async operations
+  </Card>
+  <Card title="Configuration" icon="gear" href="/core/configuration">
+    Advanced client configuration options
+  </Card>
+</CardGroup>

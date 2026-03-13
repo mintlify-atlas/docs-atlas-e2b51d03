@@ -1,0 +1,318 @@
+---
+title: 'Configuration'
+description: 'Configure the VirtualizorJS client with connection settings and options'
+icon: 'gear'
+---
+
+## Overview
+
+The VirtualizorJS client accepts a configuration object that controls how it connects to your Virtualizor server. This page documents all available configuration options and their default values.
+
+## Creating a Client
+
+Use the `createVirtualizorClient` function with a configuration object:
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-password',
+  // Optional configuration below
+  port: 4085,
+  https: true,
+  rejectUnauthorized: false,
+  timeout: 30000,
+  debug: false,
+});
+```
+
+## Configuration Options
+
+### Required Options
+
+<ParamField path="host" type="string" required>
+  The hostname or IP address of your Virtualizor server.
+  
+  **Example:** `"virtualizor.example.com"` or `"192.168.1.100"`
+</ParamField>
+
+<ParamField path="apiKey" type="string" required>
+  Your Virtualizor API key. Obtain this from the Virtualizor admin panel under Configuration > API Credentials.
+  
+  **Example:** `"abc123def456"`
+</ParamField>
+
+### Optional Options
+
+<ParamField path="apiPass" type="string" default="''">
+  Your Virtualizor API password. While marked as optional in the type definition, it's effectively required for authentication.
+  
+  **Example:** `"your-secure-password"`
+</ParamField>
+
+<ParamField path="port" type="number" default="4085">
+  The port number where Virtualizor is listening.
+  
+  **Common ports:**
+  - `4085` - HTTPS (default)
+  - `4084` - HTTP
+  
+  **Example:** `4085`
+</ParamField>
+
+<ParamField path="https" type="boolean" default="true">
+  Whether to use HTTPS for connections.
+  
+  Set to `false` if your Virtualizor server uses HTTP only (not recommended for production).
+  
+  **Example:** `true`
+</ParamField>
+
+<ParamField path="rejectUnauthorized" type="boolean" default="false">
+  Whether to reject self-signed or invalid SSL certificates.
+  
+  **Default is `false`** because Virtualizor typically uses self-signed certificates. Set to `true` only if you have a valid SSL certificate installed.
+  
+  **Example:** `false`
+</ParamField>
+
+<ParamField path="timeout" type="number" default="30000">
+  Request timeout in milliseconds. If a request takes longer than this, it will be aborted.
+  
+  **Example:** `30000` (30 seconds)
+</ParamField>
+
+<ParamField path="debug" type="boolean" default="false">
+  Enable debug logging. When `true`, the SDK logs raw response data (first 500 characters) to the console for troubleshooting.
+  
+  **Example:** `false`
+</ParamField>
+
+## Configuration Type Definition
+
+From `src/types/config.ts:1`:
+
+```typescript
+export interface VirtualizorConfig {
+  host: string;
+  apiKey: string;
+  apiPass?: string;
+  port?: number;
+  https?: boolean;
+  rejectUnauthorized?: boolean;
+  timeout?: number;
+  debug?: boolean;
+}
+```
+
+## Default Values
+
+The SDK applies these defaults for optional configuration options (from `src/config/defaults.ts:1`):
+
+```typescript
+export const DEFAULT_CONFIG = {
+  port: 4085,
+  https: true,
+  rejectUnauthorized: false,
+  timeout: 30000,
+  debug: false,
+} as const;
+```
+
+## Configuration Examples
+
+### Production Configuration
+
+Secure configuration for production environments:
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: process.env.VIRTUALIZOR_HOST!,
+  apiKey: process.env.VIRTUALIZOR_API_KEY!,
+  apiPass: process.env.VIRTUALIZOR_API_PASS!,
+  https: true,
+  port: 4085,
+  timeout: 60000, // 60 seconds for slower operations
+});
+```
+
+### Development Configuration with Debug
+
+Enable debug mode to see raw API responses:
+
+```typescript
+const client = createVirtualizorClient({
+  host: 'dev.virtualizor.local',
+  apiKey: 'dev-api-key',
+  apiPass: 'dev-api-pass',
+  debug: true, // Enable debug logging
+  timeout: 10000, // Shorter timeout for faster feedback
+});
+```
+
+### HTTP Configuration (Non-SSL)
+
+For servers without SSL (not recommended for production):
+
+```typescript
+const client = createVirtualizorClient({
+  host: '192.168.1.100',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+  https: false,
+  port: 4084, // HTTP port
+});
+```
+
+### Custom SSL Certificate Configuration
+
+For servers with valid SSL certificates:
+
+```typescript
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+  https: true,
+  rejectUnauthorized: true, // Enforce certificate validation
+  port: 4085,
+});
+```
+
+## SSL Certificate Handling
+
+<Warning>
+  Virtualizor installations typically use self-signed SSL certificates. The SDK defaults to `rejectUnauthorized: false` to handle this.
+</Warning>
+
+### Why Self-Signed Certificates?
+
+Most Virtualizor servers use self-signed SSL certificates because:
+
+- Virtualizor is often installed on private network infrastructure
+- Getting a trusted SSL certificate for internal IPs can be challenging
+- The admin panel and API are typically accessed from trusted networks
+
+### When to Use `rejectUnauthorized: true`
+
+Set `rejectUnauthorized: true` if:
+
+- You've installed a valid SSL certificate from a trusted CA
+- Your Virtualizor server uses Let's Encrypt or a commercial SSL certificate
+- You want to enforce strict SSL certificate validation
+
+### Implementation Details
+
+From `src/http.ts:61`:
+
+```typescript
+const options: https.RequestOptions = {
+  // ... other options
+  ...(this.config.https
+    ? { agent: new https.Agent({ rejectUnauthorized: this.config.rejectUnauthorized }) }
+    : {}),
+};
+```
+
+## Timeout Configuration
+
+The `timeout` option controls how long the SDK waits for API responses.
+
+### Choosing the Right Timeout
+
+- **Default (30000ms)**: Suitable for most operations
+- **Longer timeouts (60000ms+)**: For operations like VPS creation, migration, or rebuilds
+- **Shorter timeouts (10000ms)**: For simple queries in development
+
+### Timeout Error Handling
+
+```typescript
+import { createVirtualizorClient } from 'virtualizorjs';
+
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+  timeout: 5000, // 5 second timeout
+});
+
+try {
+  await client.vps.list();
+} catch (error) {
+  if (error instanceof Error && error.message.includes('timed out')) {
+    console.error('Request timed out after 5000ms');
+  }
+}
+```
+
+## Debug Mode
+
+Enable debug mode to troubleshoot API responses:
+
+```typescript
+const client = createVirtualizorClient({
+  host: 'virtualizor.example.com',
+  apiKey: 'your-api-key',
+  apiPass: 'your-api-pass',
+  debug: true,
+});
+
+// When debug is true, failed parsing will log:
+// [Virtualizor] Raw response (first 500 chars): ...
+```
+
+Debug output includes the first 500 characters of raw API responses when JSON parsing fails.
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use Environment Variables">
+    Store configuration values (especially credentials) in environment variables:
+    
+    ```typescript
+    const client = createVirtualizorClient({
+      host: process.env.VIRTUALIZOR_HOST!,
+      apiKey: process.env.VIRTUALIZOR_API_KEY!,
+      apiPass: process.env.VIRTUALIZOR_API_PASS!,
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Adjust Timeouts for Long Operations">
+    Increase timeout for operations like VPS creation:
+    
+    ```typescript
+    const client = createVirtualizorClient({
+      // ... other config
+      timeout: 120000, // 2 minutes for VPS operations
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Enable HTTPS in Production">
+    Always use HTTPS in production environments:
+    
+    ```typescript
+    const client = createVirtualizorClient({
+      // ... other config
+      https: true,
+      port: 4085,
+    });
+    ```
+  </Accordion>
+  
+  <Accordion title="Validate Certificates When Possible">
+    If you have valid SSL certificates, enforce validation:
+    
+    ```typescript
+    const client = createVirtualizorClient({
+      // ... other config
+      rejectUnauthorized: true,
+    });
+    ```
+  </Accordion>
+</AccordionGroup>
